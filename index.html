@@ -2,7 +2,7 @@
 <html lang="ko" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>제사장 마스터 플랜</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -161,9 +161,9 @@
         <!-- Main Content Wrapper -->
         <div class="flex-1 flex flex-col h-full overflow-hidden">
             <!-- Mobile Header Bar -->
-            <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between md:hidden shrink-0">
+            <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between md:hidden shrink-0 transition-all">
                 <div class="flex items-center space-x-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-sm">
                         <i class="fa-solid fa-crown text-sm"></i>
                     </div>
                     <h1 class="font-bold text-slate-900 dark:text-white text-sm">제사장 마스터 플랜</h1>
@@ -185,13 +185,13 @@
                 </div>
             </header>
 
-            <!-- Dynamic Content Container -->
-            <div id="content-container" class="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 md:p-8 pb-24 md:pb-8">
+            <!-- Dynamic Content Container (충분한 상하단 안전 여백 확보) -->
+            <div id="content-container" class="flex-1 overflow-y-auto custom-scrollbar p-3.5 sm:p-6 md:p-8 pt-3.5 sm:pt-6 pb-36 sm:pb-40 md:pb-8">
                 <!-- Content injected via JS -->
             </div>
 
-            <!-- Mobile Bottom Navigation Bar -->
-            <nav class="md:hidden bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-700/80 flex justify-around items-center px-3 py-1.5 z-30 shrink-0">
+            <!-- Mobile Bottom Navigation Bar (하단 홈 인디케이터 여백 지원) -->
+            <nav class="md:hidden bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-700/80 flex justify-around items-center px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-30 shrink-0">
                 <button onclick="switchTab('daily')" id="mob-nav-daily" class="flex flex-col items-center py-1 px-3 text-xs text-slate-500 dark:text-slate-400">
                     <i class="fa-solid fa-calendar-check text-base mb-0.5"></i>
                     <span>캘린더</span>
@@ -1308,7 +1308,7 @@
             const currentRecord = appData.dailyRecords[selectedDateStr] || { word: false, prayer: false };
 
             return `
-                <div class="max-w-5xl mx-auto space-y-3.5 sm:space-y-5">
+                <div class="max-w-5xl mx-auto space-y-3.5 sm:space-y-5 pb-10">
                     <!-- 통계 요약 카드 (말씀+기도 합산 및 계시록 현황) -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-5">
                         <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-3">
@@ -1539,7 +1539,7 @@
             }).join('');
 
             return `
-                <div class="max-w-5xl mx-auto space-y-3.5 sm:space-y-5">
+                <div class="max-w-5xl mx-auto space-y-3.5 sm:space-y-5 pb-10">
                     <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5">
                         <div>
                             <span class="text-[10px] sm:text-[11px] font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider">REVELATION MASTER</span>
@@ -2003,7 +2003,7 @@
             }).join('');
 
             return `
-                <div class="max-w-5xl mx-auto space-y-5">
+                <div class="max-w-5xl mx-auto space-y-5 pb-10">
                     <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <span class="text-[11px] font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider">EVANGELISM MASTER</span>
                         <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-0.5">전도 마스터</h2>
