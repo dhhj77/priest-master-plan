@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>제사장 마스터 플랜</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fdf8f6',
+                            100: '#fbe8e3',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <!-- Google Fonts Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+        html.is-authenticated #login-overlay { display: none !important; }
+        html.is-authenticated #app { display: flex !important; }
+    </style>
+    <script>
+        // 자동 로그인 즉시 확인 (화면 깜빡임 방지)
+        try {
+            const savedAuth = localStorage.getItem('priest_master_plan_auth_v1');
+            if (savedAuth !== 'false') {
+                document.documentElement.classList.add('is-authenticated');
+            }
+        } catch(e){}
+    </script>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200 overflow-hidden">
+
+    <!-- Login Screen Overlay -->
+    <div id="login-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 p-8 text-center space-y-6">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white text-2xl mx-auto shadow-lg shadow-orange-500/30">
+                <i class="fa-solid fa-crown"></i>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900 dark:text-white">제사장 마스터 플랜</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">관리자 인증을 통해 마스터 플랜에 접속하세요.</p>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">관리자 아이디</label>
+                    <input type="text" id="login-id" value="곽도현" placeholder="아이디를 입력하세요" required class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">비밀번호</label>
+                    <input type="password" id="login-pw" value="144000" placeholder="비밀번호를 입력하세요" required class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                    <label class="flex items-center space-x-2 cursor-pointer select-none">
+                        <input type="checkbox" id="auto-login-check" checked class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500 cursor-pointer">
+                        <span>자동 로그인 유지</span>
+                    </label>
+                </div>
+                <div id="login-error" class="text-xs text-red-500 text-center hidden font-medium">아이디 또는 비밀번호가 일치하지 않습니다.</div>
+                <button type="submit" class="w-full py-3.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-orange-500/25">
+                    관리자 로그인
+                </button>
+            </form>
+        </div>
+    </div>
+
+
+
+    <!-- Main App Container -->
+    <div id="app" class="flex h-full overflow-hidden hidden">
+        <!-- PC Sidebar Navigation -->
+        <aside class="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 hidden md:flex flex-col justify-between z-20 shrink-0">
+            <div>
+                <!-- App Logo/Header -->
+                <div class="p-6 border-b border-slate-100 dark:border-slate-700/50 flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                        <i class="fa-solid fa-crown text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-slate-900 dark:text-white text-base leading-tight">제사장 마스터 플랜</h1>
+                        <span class="text-xs text-orange-600 dark:text-orange-400 font-medium">관리자: 곽도현 님</span>
+                    </div>
+                </div>
+
+                <!-- Menu Items -->
+                <nav class="p-4 space-y-1.5">
+                    <button onclick="switchTab('daily')" id="nav-daily" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-slate-700/50 hover:text-orange-600 dark:hover:text-orange-400">
+                        <i class="fa-solid fa-calendar-check w-5 text-center"></i>
+                        <span>일일 습관 캘린더</span>
+                    </button>
+                    <button onclick="switchTab('revelation')" id="nav-revelation" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-slate-700/50 hover:text-orange-600 dark:hover:text-orange-400">
+                        <i class="fa-solid fa-book-bible w-5 text-center"></i>
+                        <span>계시록 증거</span>
+                    </button>
+                    <button onclick="switchTab('evangelism')" id="nav-evangelism" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-slate-700/50 hover:text-orange-600 dark:hover:text-orange-400">
+                        <i class="fa-solid fa-fire-flame-curved w-5 text-center"></i>
+                        <span>전도 마스터</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Sidebar Footer / Dark Mode, Backup, Cloud & Logout -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-700/50 space-y-2.5">
+                <!-- Cloud Sync Status Widget -->
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span id="cloud-status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                            <span id="cloud-status-text" class="text-xs font-semibold text-slate-700 dark:text-slate-300">로컬 저장 모드</span>
+                        </div>
+                        <button onclick="openFirebaseModal()" class="text-[11px] font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-md hover:bg-orange-50 dark:hover:bg-slate-800 transition">
+                            <i class="fa-solid fa-gear mr-0.5"></i> 설정
+                        </button>
+                    </div>
+                    <div id="cloud-last-sync" class="text-[10px] text-slate-400 truncate">Firebase 미연동 (기기 로컬 저장)</div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">다크 모드</span>
+                    <button onclick="toggleDarkMode()" class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+                <div class="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
+                    <button onclick="exportData()" title="백업" class="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-download"></i> 백업
+                    </button>
+                    <button onclick="document.getElementById('import-file').click()" title="복원" class="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-upload"></i> 복원
+                    </button>
+                    <input type="file" id="import-file" onchange="importData(event)" accept=".json" class="hidden">
+                </div>
+                <button onclick="handleLogout()" class="w-full py-2 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 text-red-600 dark:text-red-400 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 mt-1">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> 로그아웃
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden">
+            <!-- Mobile Header Bar -->
+            <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between md:hidden shrink-0">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white">
+                        <i class="fa-solid fa-crown text-sm"></i>
+                    </div>
+                    <h1 class="font-bold text-slate-900 dark:text-white text-sm">제사장 마스터 플랜</h1>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="openFirebaseModal()" class="relative w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 text-xs" title="Firebase 클라우드 연동">
+                        <i class="fa-solid fa-cloud"></i>
+                        <span id="mobile-cloud-status-dot" class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-slate-400 border border-white dark:border-slate-800"></span>
+                    </button>
+                    <button onclick="exportData()" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 text-xs" title="백업">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                    <button onclick="toggleDarkMode()" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 text-xs">
+                        <i id="mobile-theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                    <button onclick="handleLogout()" class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-950/40 flex items-center justify-center text-red-600 text-xs" title="로그아웃">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dynamic Content Container -->
+            <div id="content-container" class="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 md:p-8 pb-24 md:pb-8">
+                <!-- Content injected via JS -->
+            </div>
+
+            <!-- Mobile Bottom Navigation Bar -->
+            <nav class="md:hidden bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-700/80 flex justify-around items-center px-3 py-1.5 z-30 shrink-0">
+                <button onclick="switchTab('daily')" id="mob-nav-daily" class="flex flex-col items-center py-1 px-3 text-xs text-slate-500 dark:text-slate-400">
+                    <i class="fa-solid fa-calendar-check text-base mb-0.5"></i>
+                    <span>캘린더</span>
+                </button>
+                <button onclick="switchTab('revelation')" id="mob-nav-revelation" class="flex flex-col items-center py-1 px-3 text-xs text-slate-500 dark:text-slate-400">
+                    <i class="fa-solid fa-book-bible text-base mb-0.5"></i>
+                    <span>계시록 증거</span>
+                </button>
+                <button onclick="switchTab('evangelism')" id="mob-nav-evangelism" class="flex flex-col items-center py-1 px-3 text-xs text-slate-500 dark:text-slate-400">
+                    <i class="fa-solid fa-fire-flame-curved text-base mb-0.5"></i>
+                    <span>전도 마스터</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+
+
+    <!-- Modal for Revelation Chapter Detail & Sub-topic Builder -->
+    <div id="rev-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[92vh] overflow-hidden">
+            <div class="p-3.5 sm:p-5 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                <div>
+                    <span id="rev-modal-chap-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">제장</span>
+                    <h2 id="rev-modal-title" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5">장 제목</h2>
+                </div>
+                <button onclick="closeRevModal()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <div class="p-3.5 sm:p-6 overflow-y-auto space-y-3.5 custom-scrollbar flex-1">
+                <div class="bg-orange-50 dark:bg-slate-900/50 p-3 sm:p-3.5 rounded-xl border border-orange-200/50 dark:border-slate-700">
+                    <h3 class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 mb-0.5"><i class="fa-solid fa-list-check text-orange-500 mr-1.5"></i>소주제별 교안 / 스크립트 / 스피치 및 파일 첨부</h3>
+                    <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">각 소주제별 메모와 함께 사진, 동영상, 음성 파일 등을 첨부하여 완벽한 교안을 완성하세요.</p>
+                </div>
+                <div id="subtopics-container" class="space-y-3 sm:space-y-4">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+            <div class="p-3 sm:p-4 border-t border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
+                <span class="text-[11px] text-slate-400 hidden sm:inline">💡 데이터는 브라우저에 안전하게 자동 저장됩니다.</span>
+                <button onclick="closeRevModal()" class="w-full sm:w-auto px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-xl text-xs sm:text-sm transition shadow-lg shadow-orange-500/20">
+                    완료 및 저장
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Modal for File / Photo Preview & Download -->
+    <div id="file-preview-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[92vh] overflow-hidden">
+            <!-- Preview Header -->
+            <div class="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5 min-w-0 mr-2">
+                    <div id="preview-modal-icon" class="w-8 h-8 rounded-lg bg-orange-100 dark:bg-slate-700 text-orange-600 dark:text-orange-400 flex items-center justify-center text-sm shrink-0">
+                        <i class="fa-solid fa-image"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 id="preview-modal-filename" class="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm truncate">파일명</h3>
+                        <p id="preview-modal-filesize" class="text-[10px] sm:text-xs text-slate-400">파일 미리보기 및 다운로드</p>
+                    </div>
+                </div>
+                <button onclick="closeFilePreviewModal()" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 transition flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <!-- Preview Content -->
+            <div id="preview-modal-body" class="p-3 sm:p-5 overflow-auto flex-1 flex items-center justify-center bg-slate-950/5 dark:bg-slate-950/40 min-h-[260px] max-h-[65vh]">
+                <!-- Dynamic Content (Image, Video, Audio, or File Icon) -->
+            </div>
+            <!-- Preview Footer -->
+            <div class="p-3.5 sm:p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/80">
+                <button onclick="closeFilePreviewModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition">
+                    닫기
+                </button>
+                <a id="preview-modal-download-btn" href="#" download="" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-orange-500/25 flex items-center gap-1.5">
+                    <i class="fa-solid fa-download"></i>
+                    <span>다운로드 받기</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Firebase Cloud Sync Settings -->
+    <div id="firebase-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[92vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-3.5 sm:p-5 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5 sm:space-x-3">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 flex items-center justify-center text-base sm:text-lg shadow-sm">
+                        <i class="fa-solid fa-fire"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            Firebase 실시간 동기화
+                        </h2>
+                        <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">모바일과 PC 간 데이터를 실시간으로 자동 연동합니다.</p>
+                    </div>
+                </div>
+                <button onclick="closeFirebaseModal()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 custom-scrollbar flex-1 text-xs">
+                <!-- Status Banner -->
+                <div id="modal-status-banner" class="p-4 rounded-xl border flex items-start space-x-3 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 transition">
+                    <div id="modal-status-icon" class="text-xl mt-0.5 text-slate-400 shrink-0">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <h4 id="modal-status-title" class="font-bold text-sm text-slate-800 dark:text-slate-200">로컬 저장 모드 (Firebase 미연동)</h4>
+                            <span id="modal-status-time" class="text-[11px] text-slate-400"></span>
+                        </div>
+                        <p id="modal-status-desc" class="text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">현재는 이 기기 브라우저(localStorage)에만 데이터가 저장됩니다. Firebase를 연동하면 모바일, 태블릿, 다른 PC 어디서든 체크한 내용이 실시간으로 동기화됩니다.</p>
+                    </div>
+                </div>
+
+                <!-- Sync Action Buttons -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
+                    <button onclick="manualSyncToCloud()" class="py-2.5 px-3 bg-orange-50 hover:bg-orange-100 dark:bg-slate-700/60 dark:hover:bg-slate-700 text-orange-600 dark:text-orange-400 font-semibold rounded-xl border border-orange-200/50 dark:border-slate-600 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>현재 데이터 클라우드로 올리기</span>
+                    </button>
+                    <button onclick="manualSyncFromCloud()" class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl border border-slate-200 dark:border-slate-600 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <span>클라우드에서 최신 데이터 받기</span>
+                    </button>
+                    <button onclick="copySyncLinkToClipboard()" class="sm:col-span-2 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl border border-emerald-200 dark:border-emerald-800 transition flex items-center justify-center gap-1.5 shadow-xs">
+                        <i class="fa-solid fa-share-nodes text-emerald-600"></i>
+                        <span>스마트폰으로 연동 링크 보내기 (카톡 전송용 복사)</span>
+                    </button>
+                </div>
+
+                <!-- Config Input Area -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                            <i class="fa-solid fa-code text-orange-500"></i> Firebase Config 설정값 붙여넣기
+                        </label>
+                        <span class="text-[11px] text-slate-400">JSON 또는 코드 전체 지원</span>
+                    </div>
+                    <textarea id="firebase-config-raw" oninput="handleConfigRawInput(this.value)" rows="5" placeholder='Firebase Console에서 복사한 코드 전체나 JSON을 그대로 붙여넣으세요:&#10;&#10;const firebaseConfig = {&#10;  apiKey: "AIzaSy...",&#10;  authDomain: "...",&#10;  projectId: "...",&#10;  ...&#10;};' class="w-full p-3 font-mono text-[11px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                </div>
+
+                <!-- Individual Fields (Collapsible / Preview) -->
+                <div class="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                    <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">주요 설정 필드 (자동 반영)</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <span class="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Project ID (프로젝트 ID)</span>
+                            <input type="text" id="fb-field-projectId" placeholder="예: my-church-plan" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs focus:ring-1 focus:ring-orange-500">
+                        </div>
+                        <div>
+                            <span class="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">API Key</span>
+                            <input type="text" id="fb-field-apiKey" placeholder="예: AIzaSy..." class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs focus:ring-1 focus:ring-orange-500">
+                        </div>
+                        <div>
+                            <span class="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Auth Domain</span>
+                            <input type="text" id="fb-field-authDomain" placeholder="예: my-plan.firebaseapp.com" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs focus:ring-1 focus:ring-orange-500">
+                        </div>
+                        <div>
+                            <span class="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">App ID</span>
+                            <input type="text" id="fb-field-appId" placeholder="예: 1:12345:web:..." class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs focus:ring-1 focus:ring-orange-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Setup Guide Accordion -->
+                <details class="bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700 p-3.5 space-y-2">
+                    <summary class="font-bold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-info text-orange-500"></i> 1분 만에 Firebase 무료 연동하는 방법 안내</span>
+                        <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                    </summary>
+                    <ol class="list-decimal list-inside space-y-1.5 text-slate-600 dark:text-slate-400 pt-2 text-[11px] leading-relaxed">
+                        <li><b>Firebase Console 접속:</b> <a href="https://console.firebase.google.com" target="_blank" class="text-orange-600 dark:text-orange-400 underline font-semibold">console.firebase.google.com</a>에 접속해 구글 로그인합니다.</li>
+                        <li><b>새 프로젝트 만들기:</b> '프로젝트 추가'를 누르고 프로젝트 이름을 입력해 생성합니다. (Google 애널리틱스는 해제해도 무방)</li>
+                        <li><b>웹 앱 등록:</b> 프로젝트 메인에서 웹 아이콘 <code>&lt;/&gt;</code>을 클릭하고 앱을 등록합니다. 화면에 나오는 <code>firebaseConfig = { ... }</code> 코드를 복사합니다.</li>
+                        <li><b>Firestore 데이터베이스 생성:</b> 왼쪽 메뉴 [빌드] &rarr; [Firestore Database] &rarr; [데이터베이스 만들기] 클릭 &rarr; <b>테스트 모드에서 시작</b> 선택 &rarr; 리전 선택 후 완료.</li>
+                        <li><b>설정 붙여넣기:</b> 복사한 설정값을 위의 입력창에 붙여넣고 아래 <b>[연동 및 실시간 동기화 시작]</b> 버튼을 누르면 끝!</li>
+                    </ol>
+                </details>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3.5 sm:p-4 border-t border-slate-100 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-center gap-2">
+                <button onclick="clearFirebaseConfig()" class="w-full sm:w-auto px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl font-medium transition text-xs">
+                    연동 초기화 (로컬 모드 복귀)
+                </button>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="closeFirebaseModal()" class="flex-1 sm:flex-initial px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition text-xs">
+                        닫기
+                    </button>
+                    <button onclick="applyFirebaseConfigFromModal()" class="flex-1 sm:flex-initial px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold transition shadow-lg shadow-orange-500/25 text-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-check"></i>
+                        <span>연동 및 실시간 동기화 시작</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-20 md:bottom-6 right-4 md:right-6 bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2.5 transform translate-y-24 opacity-0 transition-all duration-300 z-50 text-xs font-medium">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-orange-500"></i>
+        <span id="toast-message">저장되었습니다.</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        const revelationChapters = [
+            { id: 1, title: "계시록 전장 결론과 시작", subs: ["예수 그리스도의 계시", "하나님 말씀과 예수님의 증거", "계시록을 지키는 자들이 받을 복", "하나님 나라와 제사장", "구름 타고 오시는 예수님과 찌른 자들", "알파와 오메가", "성령의 감동", "일곱 금 촛대와 인자 같은 이", "대언의 목자와 일곱 별의 비밀"] },
+            { id: 2, title: "일곱 교회 사자에게 보낸 편지", subs: ["에베소 교회 사자에게 보낸 편지", "서머나 교회 사자에게 보낸 편지", "버가모 교회 사자에게 보낸 편지", "두아디라 교회 사자에게 보낸 편지"] },
+            { id: 3, title: "일곱 교회 사자에게 보낸 편지 2", subs: ["사데 교회 사자에게 보낸 편지", "빌라델비아 교회 사자에게 보낸 편지", "라오디게아 교회 사자에게 보낸 편지"] },
+            { id: 4, title: "하나님의 영계 보좌", subs: ["영계 하나님의 보좌 형상", "이십사 장로와 일곱 등불의 영", "유리바다와 네 생물과 눈"] },
+            { id: 5, title: "일곱 인으로 봉한 책", subs: ["일곱 인으로 봉한 책과 일곱 뿔과 일곱 눈", "성도의 기도와 새 노래"] },
+            { id: 6, title: "배도한 선민 해·달·별에 대한 심판", subs: ["첫째 인의 사건", "둘째 인의 사건", "셋째 인의 사건", "넷째 인의 사건", "다섯째 인의 사건", "여섯째 인의 사건", "어린양의 진노와 심판"] },
+            { id: 7, title: "인 맞은 영적 새 이스라엘 열두 지파", subs: ["이 일 후 하나님의 인", "인 맞은 열두 지파 십사만 사천 명", "흰 옷 입은 큰 무리", "큰 환난과 어린양의 피", "하나님의 보좌와 그의 성전"] },
+            { id: 8, title: "마지막 인과 일곱 나팔", subs: ["일곱 천사의 일곱 나팔", "첫째 나팔의 재앙", "둘째 나팔의 재앙", "셋째 나팔의 재앙", "넷째 나팔의 재앙"] },
+            { id: 9, title: "무저갱의 황충과 범죄한 천사", subs: ["다섯째 나팔의 재앙", "죽을 수도 없는 다섯 달의 환난", "황충들의 모습", "여섯째 나팔의 재앙", "꼬리에 머리가 있는 말들", "회개치 않는 선민"] },
+            { id: 10, title: "하늘에서 온 계시의 책", subs: ["하늘에서 온 열린 책", "일곱째 나팔의 비밀", "책을 먹은 사도 요한의 사명"] },
+            { id: 11, title: "두 증인의 죽음과 일곱째 나팔", subs: ["성전과 밖 마당", "굵은 베옷 입은 두 증인", "여러 재앙과 두 증인의 죽음", "다시 생기 받아 부활한 두 증인", "일곱째 나팔과 하나님 나라"] },
+            { id: 12, title: "아들과 용과의 전쟁", subs: ["하늘에 있는 이적", "만국을 다스릴 남자", "하늘에 있는 전쟁", "하나님 나라와 구원", "하늘에서 쫓겨나 바다 모래 위에 선 용"] },
+            { id: 13, title: "짐승에게 표 받고 경배하는 선민", subs: ["바다에서 나온 짐승과 용", "짐승을 따르는 온 땅", "짐승에게 패배하는 장막 백성", "두 짐승과 우상", "짐승의 표 육백육십육"] },
+            { id: 14, title: "처음 익은 열매 시온산 십사만 사천", subs: ["인 맞은 시온산의 십사만 사천 명", "영원한 복음 새 노래", "짐승의 표 받은 자가 받을 심판", "익은 곡식 추수", "심판받는 포도"] },
+            { id: 15, title: "만국이 와서 경배할 곳 증거장막 성전", subs: ["하늘에 있는 큰 다른 이적", "유리바다와 짐승의 무리를 이긴 자들", "모세의 노래와 어린양의 노래", "만국이 와서 경배할 곳", "증거장막 성전과 진노의 대접"] },
+            { id: 16, title: "진노의 일곱 대접과 진노를 받는 자들", subs: ["첫째 대접과 악독한 헌데", "둘째 대접과 피같이 된 바다", "셋째 대접과 피가 된 강과 물 근원", "넷째 대접과 사람을 태우는 해", "다섯째 대접과 짐승의 나라와 보좌", "여섯째 대접과 유브라데와 아마겟돈 전쟁", "일곱째 대접과 세 갈래로 갈라지는 큰 성 바빌론"] },
+            { id: 17, title: "음녀와 음행의 포도주", subs: ["많은 물 위에 앉은 음녀가 받을 심판", "큰 음녀의 비밀", "음녀가 탄 일곱 머리와 열 뿔 가진 짐승의 비밀", "주 재림의 유월절"] },
+            { id: 18, title: "바빌론의 상품과 귀신과의 결혼", subs: ["귀신의 처소 바빌론", "바빌론에서 나오는 백성들", "땅의 왕들과 상고들의 애통", "바빌론 상품과 바빌론이 탐하던 과실", "바다의 선장과 선객과 선인", "심판받는 바빌론의 혼인 잔치"] },
+            { id: 19, title: "어린양의 혼인 잔치와 백마 탄 자", subs: ["허단 영육의 감사와 영광", "어린양의 혼인 기약과 천국 잔치", "백마 탄 자와 이한 검", "공중의 새들과 짐승의 고기"] },
+            { id: 20, title: "천년성 첫째 부활과 천 년 후의 심판", subs: ["무저갱에 갇히는 용", "영육이 하나 되는 첫째 부활", "천 년 후의 심판과 영생과 영벌"] },
+            { id: 21, title: "새 하늘 새 땅과 거룩한 성", subs: ["새 하늘과 새 땅과 거룩한 성", "유업을 상속받는 아들과 둘째 사망", "하늘에서 내려오는 거룩한 성 새 예루살렘", "열두 보석과 열두 진주 문", "밤이 없는 거룩한 성"] },
+            { id: 22, title: "생명나무와 예수님의 사자", subs: ["하나님의 보좌와 생명나무", "거룩한 성의 종들", "영육 대언자", "행위대로 받는 상벌", "거룩한 성에 들어갈 자격"] }
+        ];
+
+        const evangelismStages = [
+            { id: 'online', name: '온라인 찾기', desc: 'SNS, 커뮤니티 및 오픈채팅방을 통한 영혼 발굴 및 컨택' },
+            { id: 'street', name: '노방', desc: '거리 전도 및 현장 대면 접촉을 통한 복음 씨앗 뿌리기' },
+            { id: 'counsel', name: '상담', desc: '성경적 고민 상담 및 진리 대화를 통한 마음 열기' },
+            { id: 'harvest', name: '따기', desc: '말씀 공부 및 후속 양육으로 인도하는 연결(따기) 단계' },
+            { id: 'gospel', name: '복음방', desc: '본격적인 계시록 및 말씀 복음방 세션 진행' }
+        ];
+
+        let currentTab = 'daily';
+        let selectedDateStr = new Date().toISOString().split('T')[0];
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth(); // 0-indexed
+
+        const STORAGE_KEY = 'priest_master_plan_app_v3';
+        const AUTH_KEY = 'priest_master_plan_auth_v1';
+        const FIREBASE_CONFIG_KEY = 'priest_master_plan_fb_cfg_v1';
+        const IDB_DB_NAME = 'priest_master_plan_idb';
+        const IDB_STORE_NAME = 'appData';
+        const IDB_KEY = 'main';
+
+        // ====================================================
+        // 💾 IndexedDB 2중 저장 (localStorage 소실 대비 백업)
+        // ====================================================
+        let idbInstance = null;
+
+        function openIDB() {
+            return new Promise((resolve, reject) => {
+                if (idbInstance) { resolve(idbInstance); return; }
+                const req = indexedDB.open(IDB_DB_NAME, 1);
+                req.onupgradeneeded = e => {
+                    e.target.result.createObjectStore(IDB_STORE_NAME);
+                };
+                req.onsuccess = e => { idbInstance = e.target.result; resolve(idbInstance); };
+                req.onerror = e => reject(e);
+            });
+        }
+
+        function saveToIDB(data) {
+            openIDB().then(db => {
+                const tx = db.transaction(IDB_STORE_NAME, 'readwrite');
+                tx.objectStore(IDB_STORE_NAME).put({ data, savedAt: Date.now() }, IDB_KEY);
+            }).catch(e => console.warn('IDB 저장 실패:', e));
+        }
+
+        function loadFromIDB() {
+            return openIDB().then(db => {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(IDB_STORE_NAME, 'readonly');
+                    const req = tx.objectStore(IDB_STORE_NAME).get(IDB_KEY);
+                    req.onsuccess = e => resolve(e.target.result || null);
+                    req.onerror = reject;
+                });
+            });
+        }
+
+        // 앱 시작 시 localStorage vs IndexedDB 중 더 최신 데이터 선택
+        async function loadBestData() {
+            const lsRaw = localStorage.getItem(STORAGE_KEY);
+            const lsData = lsRaw ? JSON.parse(lsRaw) : null;
+            let idbRecord = null;
+            try { idbRecord = await loadFromIDB(); } catch(e) {}
+
+            // IDB에 더 최신 데이터가 있으면 IDB 우선
+            if (idbRecord && idbRecord.data && idbRecord.savedAt) {
+                if (!lsData) {
+                    // localStorage 비어있으면 IDB에서 복구
+                    console.log('[데이터 복구] IndexedDB에서 데이터 복구됨 (저장:', new Date(idbRecord.savedAt).toLocaleString(), ')');
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(idbRecord.data));
+                    _pendingRecoveryMsg = '💾 이전 데이터가 자동 복구되었습니다!';
+                    return idbRecord.data;
+                }
+                // 둘 다 있으면: IDB에 _savedAt 타임스탬프가 더 최신인지 확인
+                const lsSavedAt = lsData._savedAt || 0;
+                if (idbRecord.savedAt > lsSavedAt + 1000) {
+                    // IDB가 1초 이상 더 최신
+                    console.log('[데이터 병합] IDB 데이터가 더 최신, 적용함');
+                    return idbRecord.data;
+                }
+            }
+            return lsData || { darkMode: false, dailyRecords: {}, revelationProgress: {}, evangelismProgress: {} };
+        }
+        // 복구 메시지 pending 플래그
+        let _pendingRecoveryMsg = null;
+
+        // ====================================================
+        // 🔥 Firebase & Cloud Firestore 기본 설정
+        // ====================================================
+        // 코드에 직접 입력하거나, 웹 화면의 [설정] 버튼을 눌러 브라우저에서 바로 붙여넣을 수 있습니다.
+        const DEFAULT_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyAvW7T6t3QPwN6LhWqahh7soyFmSRYnjmM",
+            authDomain: "priest-plan-89605.firebaseapp.com",
+            projectId: "priest-plan-89605",
+            storageBucket: "priest-plan-89605.firebasestorage.app",
+            messagingSenderId: "212858145405",
+            appId: "1:212858145405:web:049798715b3c4d6bec7f14"
+        };
+
+        let db = null;
+        let firestoreUnsubscribe = null;
+        let cloudSyncTimeout = null;
+        let activeFirebaseConfig = null;
+        let currentCloudState = 'local'; // 'local' | 'connected' | 'syncing' | 'error'
+        let lastSyncTimeString = '';
+
+        // appData는 async 초기화 후 채워짐 (기본값으로 먼저 세팅)
+        let appData = { darkMode: false, dailyRecords: {}, revelationProgress: {}, evangelismProgress: {} };
+
+        window.onload = async function() {
+            // 🔗 스마트폰 연동 링크(?fb_sync=...) 수신 처리
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const fbSyncParam = urlParams.get('fb_sync');
+                if (fbSyncParam) {
+                    const decoded = JSON.parse(decodeURIComponent(atob(fbSyncParam)));
+                    if (decoded && (decoded.projectId || decoded.apiKey)) {
+                        localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(decoded));
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        _pendingRecoveryMsg = '🎉 스마트폰 클라우드 동기화가 자동 연결되었습니다!';
+                    }
+                }
+            } catch (err) {
+                console.warn('fb_sync 파싱 실패:', err);
+            }
+
+            // ✅ localStorage + IndexedDB 중 최신 데이터 로드
+            appData = await loadBestData();
+
+            // 자동 로그인 처리 (localStorage 기준 영구 유지)
+            let isLoggedIn = localStorage.getItem(AUTH_KEY);
+            // 처음 접속이거나 명시적으로 로그아웃하지 않은 경우 기본 자동 로그인 활성화
+            if (isLoggedIn === null || isLoggedIn !== 'false') {
+                isLoggedIn = 'true';
+                localStorage.setItem(AUTH_KEY, 'true');
+            }
+
+            if (isLoggedIn === 'true') {
+                document.documentElement.classList.add('is-authenticated');
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('is-authenticated');
+                document.getElementById('login-overlay').classList.remove('hidden');
+                document.getElementById('app').classList.add('hidden');
+                document.getElementById('login-id').value = '곽도현';
+                document.getElementById('login-pw').value = '144000';
+            }
+
+            if (appData.darkMode) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcons(true);
+            }
+            switchTab('daily');
+
+            // 복구 메시지 표시 (데이터가 IDB에서 복구된 경우)
+            if (_pendingRecoveryMsg) {
+                setTimeout(() => showToast(_pendingRecoveryMsg), 500);
+                _pendingRecoveryMsg = null;
+            }
+
+            // Firebase 실시간 클라우드 연동 초기화
+            initFirebase();
+        };
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const idInput = document.getElementById('login-id').value.trim();
+            const pwInput = document.getElementById('login-pw').value.trim();
+            const errorEl = document.getElementById('login-error');
+            const autoLogin = document.getElementById('auto-login-check')?.checked !== false;
+
+            if (idInput === '곽도현' && pwInput === '144000') {
+                if (autoLogin) {
+                    localStorage.setItem(AUTH_KEY, 'true');
+                } else {
+                    sessionStorage.setItem(AUTH_KEY, 'true');
+                    localStorage.setItem(AUTH_KEY, 'false');
+                }
+                document.documentElement.classList.add('is-authenticated');
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                showToast('관리자 곽도현님 환영합니다!');
+            } else {
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            if (confirm("로그아웃 하시겠습니까? (자동 로그인이 해제됩니다)")) {
+                localStorage.setItem(AUTH_KEY, 'false');
+                sessionStorage.removeItem(AUTH_KEY);
+                document.documentElement.classList.remove('is-authenticated');
+                document.getElementById('login-overlay').classList.remove('hidden');
+                document.getElementById('app').classList.add('hidden');
+                document.getElementById('login-id').value = '곽도현';
+                document.getElementById('login-pw').value = '';
+                document.getElementById('login-error').classList.add('hidden');
+                showToast('로그아웃되었습니다.');
+            }
+        }
+
+        function saveData() {
+            appData._savedAt = Date.now(); // 저장 시각 타임스탬프
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            saveToIDB(appData); // IndexedDB에도 동시 저장 (2중 백업)
+            if (db) {
+                syncLocalToCloud();
+            }
+        }
+
+        // ====================================================
+        // 🔥 Firebase & Cloud Firestore 연동 로직
+        // ====================================================
+        function getActiveFirebaseConfig() {
+            try {
+                const saved = localStorage.getItem(FIREBASE_CONFIG_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && (parsed.projectId || parsed.apiKey)) {
+                        return parsed;
+                    }
+                }
+            } catch (e) {
+                console.warn("로컬 Firebase 설정 로드 실패:", e);
+            }
+            if (DEFAULT_FIREBASE_CONFIG.projectId || DEFAULT_FIREBASE_CONFIG.apiKey) {
+                return DEFAULT_FIREBASE_CONFIG;
+            }
+            return null;
+        }
+
+        function initFirebase() {
+            activeFirebaseConfig = getActiveFirebaseConfig();
+            if (!activeFirebaseConfig || !activeFirebaseConfig.projectId) {
+                updateCloudStatus('local', 'Firebase 미연동 (기기 로컬 저장)');
+                return;
+            }
+
+            try {
+                if (typeof firebase === 'undefined') {
+                    console.warn("Firebase SDK가 로드되지 않았습니다.");
+                    updateCloudStatus('error', 'Firebase SDK 로드 실패 (네트워크 확인)');
+                    return;
+                }
+
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(activeFirebaseConfig);
+                }
+                db = firebase.firestore();
+
+                setupFirestoreListener();
+            } catch (err) {
+                console.error("Firebase 초기화 에러:", err);
+                updateCloudStatus('error', '연결 오류: ' + (err.message || '설정을 확인하세요'));
+            }
+        }
+
+        function setupFirestoreListener() {
+            if (!db) return;
+            if (firestoreUnsubscribe) {
+                try { firestoreUnsubscribe(); } catch(e){}
+            }
+
+            updateCloudStatus('syncing', '클라우드 데이터 확인 중...');
+            const docRef = db.collection("priest_master_plan").doc("appData");
+
+            firestoreUnsubscribe = docRef.onSnapshot((doc) => {
+                if (doc.metadata && doc.metadata.hasPendingWrites) {
+                    // 현재 기기에서 방금 보낸 데이터이므로 화면 재렌더링 생략
+                    return;
+                }
+
+                if (doc.exists) {
+                    const remoteData = doc.data();
+                    if (remoteData) {
+                        // 클라우드 데이터 적용
+                        appData = {
+                            darkMode: remoteData.darkMode || false,
+                            dailyRecords: remoteData.dailyRecords || {},
+                            revelationProgress: remoteData.revelationProgress || {},
+                            evangelismProgress: remoteData.evangelismProgress || {}
+                        };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+                        saveToIDB(appData); // IDB에도 동기화
+                        if (appData.darkMode) {
+                            document.documentElement.classList.add('dark');
+                            updateThemeIcons(true);
+                        } else {
+                            document.documentElement.classList.remove('dark');
+                            updateThemeIcons(false);
+                        }
+                        renderContent();
+                        lastSyncTimeString = new Date().toLocaleTimeString('ko-KR');
+                        updateCloudStatus('connected', `실시간 동기화 완료 (${lastSyncTimeString})`);
+                    }
+                } else {
+                    // 클라우드 Firestore에 아직 문서가 없으면 현재 로컬 데이터를 클라우드로 자동 마이그레이션!
+                    console.log("Firestore 초기 문서 생성 및 로컬 데이터 업로드 중...");
+                    syncLocalToCloud(true);
+                }
+            }, (error) => {
+                console.error("Firestore snapshot 오류:", error);
+                let errText = "동기화 오류";
+                if (error.code === 'permission-denied') {
+                    errText = 'Firestore 보안 규칙 권한 거부 (Rules 확인 필요)';
+                } else if (error.message) {
+                    errText = error.message;
+                }
+                updateCloudStatus('error', errText);
+            });
+        }
+
+        function syncLocalToCloud(isImmediate = false) {
+            if (!db) return;
+
+            updateCloudStatus('syncing', '클라우드에 저장 중...');
+            if (cloudSyncTimeout) clearTimeout(cloudSyncTimeout);
+
+            const delay = isImmediate ? 0 : 700;
+            cloudSyncTimeout = setTimeout(async () => {
+                try {
+                    const docRef = db.collection("priest_master_plan").doc("appData");
+                    const dataToSave = {
+                        ...appData,
+                        _lastUpdated: new Date().toISOString()
+                    };
+                    await docRef.set(dataToSave, { merge: true });
+                    lastSyncTimeString = new Date().toLocaleTimeString('ko-KR');
+                    updateCloudStatus('connected', `실시간 동기화 완료 (${lastSyncTimeString})`);
+                } catch (err) {
+                    console.error("클라우드 저장 실패:", err);
+                    let errMsg = err.message || '저장 오류';
+                    if (err.code === 'permission-denied') {
+                        errMsg = 'Firestore 보안 규칙 확인 필요';
+                    }
+                    updateCloudStatus('error', '클라우드 저장 실패: ' + errMsg);
+                    showToast('⚠️ 클라우드 저장 실패: ' + errMsg);
+                }
+            }, delay);
+        }
+
+        function updateCloudStatus(state, msg) {
+            currentCloudState = state;
+            const dot = document.getElementById('cloud-status-dot');
+            const mobDot = document.getElementById('mobile-cloud-status-dot');
+            const text = document.getElementById('cloud-status-text');
+            const sub = document.getElementById('cloud-last-sync');
+
+            // 색상 매핑
+            let dotColor = 'bg-slate-400';
+            let titleText = '로컬 저장 모드';
+
+            if (state === 'connected') {
+                dotColor = 'bg-emerald-500 shadow-sm shadow-emerald-500/50';
+                titleText = '클라우드 동기화됨';
+            } else if (state === 'syncing') {
+                dotColor = 'bg-amber-400 animate-pulse';
+                titleText = '클라우드 동기화 중';
+            } else if (state === 'error') {
+                dotColor = 'bg-red-500 animate-pulse';
+                titleText = '클라우드 연결 오류';
+            }
+
+            if (dot) dot.className = `w-2.5 h-2.5 rounded-full ${dotColor}`;
+            if (mobDot) mobDot.className = `absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${dotColor} border border-white dark:border-slate-800`;
+            if (text) text.innerText = titleText;
+            if (sub) sub.innerText = msg;
+
+            // 상단 동기화 배너 컨테이너 실시간 반영
+            const topBannerContainer = document.getElementById('top-cloud-sync-banner-container');
+            if (topBannerContainer && typeof getCloudSyncBannerInnerContent === 'function') {
+                topBannerContainer.innerHTML = getCloudSyncBannerInnerContent();
+            }
+
+            // 모달 배너 업데이트
+            updateModalStatusUI(state, titleText, msg);
+        }
+
+        function updateModalStatusUI(state, title, msg) {
+            const banner = document.getElementById('modal-status-banner');
+            const icon = document.getElementById('modal-status-icon');
+            const titleEl = document.getElementById('modal-status-title');
+            const descEl = document.getElementById('modal-status-desc');
+            const timeEl = document.getElementById('modal-status-time');
+
+            if (!banner || !icon || !titleEl) return;
+
+            if (timeEl) timeEl.innerText = lastSyncTimeString ? `최근: ${lastSyncTimeString}` : '';
+
+            if (state === 'connected') {
+                banner.className = "p-4 rounded-xl border flex items-start space-x-3 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50 transition";
+                icon.className = "text-xl mt-0.5 text-emerald-500 shrink-0";
+                icon.innerHTML = '<i class="fa-solid fa-cloud-check"></i>';
+                titleEl.innerText = "Firebase 실시간 동기화 정상 작동 중";
+                descEl.innerText = `현재 Firestore 클라우드와 양방향 실시간 동기화 중입니다. 모바일, 태블릿, PC 어디서든 데이터를 입력하면 실시간으로 자동 반영됩니다. (${msg})`;
+            } else if (state === 'syncing') {
+                banner.className = "p-4 rounded-xl border flex items-start space-x-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 transition";
+                icon.className = "text-xl mt-0.5 text-amber-500 shrink-0";
+                icon.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i>';
+                titleEl.innerText = "클라우드 동기화 진행 중...";
+                descEl.innerText = msg;
+            } else if (state === 'error') {
+                banner.className = "p-4 rounded-xl border flex items-start space-x-3 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50 transition";
+                icon.className = "text-xl mt-0.5 text-red-500 shrink-0";
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                titleEl.innerText = "Firebase 연동 오류";
+                descEl.innerText = `${msg} (Firebase 콘솔의 Firestore 보안 규칙 [rules]이 allow read, write: if true; 로 설정되어 있는지 확인하세요)`;
+            } else {
+                banner.className = "p-4 rounded-xl border flex items-start space-x-3 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 transition";
+                icon.className = "text-xl mt-0.5 text-slate-400 shrink-0";
+                icon.innerHTML = '<i class="fa-solid fa-circle-question"></i>';
+                titleEl.innerText = "로컬 저장 모드 (Firebase 미연동)";
+                descEl.innerText = "현재는 이 기기 브라우저(localStorage)에만 데이터가 저장됩니다. Firebase를 연동하면 모바일, 태블릿, 다른 PC 어디서든 체크한 내용이 실시간으로 동기화됩니다.";
+            }
+        }
+
+        function openFirebaseModal() {
+            const config = getActiveFirebaseConfig() || {};
+            const rawEl = document.getElementById('firebase-config-raw');
+            if (rawEl && !rawEl.value) {
+                if (config.projectId) {
+                    rawEl.value = JSON.stringify(config, null, 2);
+                }
+            }
+            document.getElementById('fb-field-projectId').value = config.projectId || '';
+            document.getElementById('fb-field-apiKey').value = config.apiKey || '';
+            document.getElementById('fb-field-authDomain').value = config.authDomain || '';
+            document.getElementById('fb-field-appId').value = config.appId || '';
+
+            updateCloudStatus(currentCloudState, document.getElementById('cloud-last-sync')?.innerText || '');
+            document.getElementById('firebase-modal').classList.remove('hidden');
+        }
+
+        function closeFirebaseModal() {
+            document.getElementById('firebase-modal').classList.add('hidden');
+        }
+
+        function handleConfigRawInput(val) {
+            const parsed = parseFirebaseConfigString(val);
+            if (parsed) {
+                if (parsed.projectId) document.getElementById('fb-field-projectId').value = parsed.projectId;
+                if (parsed.apiKey) document.getElementById('fb-field-apiKey').value = parsed.apiKey;
+                if (parsed.authDomain) document.getElementById('fb-field-authDomain').value = parsed.authDomain;
+                if (parsed.appId) document.getElementById('fb-field-appId').value = parsed.appId;
+            }
+        }
+
+        function parseFirebaseConfigString(str) {
+            if (!str) return null;
+            str = str.trim();
+            try {
+                const j = JSON.parse(str);
+                if (j && typeof j === 'object') return j;
+            } catch(e){}
+
+            const result = {};
+            const keys = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId', 'measurementId'];
+            keys.forEach(k => {
+                const match = str.match(new RegExp(`${k}["'\\s]*:[\"'\\s]*([^"',\\s\\}]+)`));
+                if (match && match[1]) {
+                    result[k] = match[1].replace(/['",]/g, '').trim();
+                }
+            });
+
+            if (result.projectId || result.apiKey) {
+                return result;
+            }
+            return null;
+        }
+
+        function applyFirebaseConfigFromModal() {
+            const raw = document.getElementById('firebase-config-raw').value.trim();
+            let cfg = parseFirebaseConfigString(raw) || {};
+
+            const pId = document.getElementById('fb-field-projectId').value.trim();
+            const aKey = document.getElementById('fb-field-apiKey').value.trim();
+            const aDomain = document.getElementById('fb-field-authDomain').value.trim();
+            const aId = document.getElementById('fb-field-appId').value.trim();
+
+            if (pId) cfg.projectId = pId;
+            if (aKey) cfg.apiKey = aKey;
+            if (aDomain) cfg.authDomain = aDomain;
+            if (aId) cfg.appId = aId;
+
+            if (!cfg.projectId || !cfg.apiKey) {
+                alert("⚠️ Project ID와 API Key는 필수 항목입니다.\nFirebase Console에서 발급받은 올바른 설정값을 입력해주세요.");
+                return;
+            }
+
+            localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(cfg));
+            activeFirebaseConfig = cfg;
+
+            closeFirebaseModal();
+            showToast('🔥 Firebase 설정이 저장되었습니다. 연동을 시작합니다.');
+
+            initFirebase();
+        }
+
+        function clearFirebaseConfig() {
+            if (confirm("Firebase 연동 설정을 초기화하고 로컬 저장 모드로 전환하시겠습니까?")) {
+                localStorage.removeItem(FIREBASE_CONFIG_KEY);
+                activeFirebaseConfig = null;
+                if (firestoreUnsubscribe) {
+                    try { firestoreUnsubscribe(); } catch(e){}
+                    firestoreUnsubscribe = null;
+                }
+                db = null;
+                document.getElementById('firebase-config-raw').value = '';
+                document.getElementById('fb-field-projectId').value = '';
+                document.getElementById('fb-field-apiKey').value = '';
+                document.getElementById('fb-field-authDomain').value = '';
+                document.getElementById('fb-field-appId').value = '';
+                updateCloudStatus('local', 'Firebase 미연동 (기기 로컬 저장)');
+                showToast('Firebase 연동이 해제되었습니다.');
+                closeFirebaseModal();
+            }
+        }
+
+        function copySyncLinkToClipboard() {
+            const cfg = getActiveFirebaseConfig();
+            if (!cfg || !cfg.projectId || !cfg.apiKey) {
+                alert("⚠️ 아직 Firebase 설정이 완료되지 않았습니다.\n아래에 Firebase 설정을 입력하고 [연동 및 실시간 동기화 시작]을 먼저 눌러주세요.");
+                return;
+            }
+            try {
+                const b64 = btoa(encodeURIComponent(JSON.stringify(cfg)));
+                const syncUrl = `${window.location.origin}${window.location.pathname}?fb_sync=${b64}`;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(syncUrl).then(() => {
+                        showToast('🔗 스마트폰 연동 링크가 복사되었습니다! 카톡으로 보내서 열어보세요.', 4000);
+                    }).catch(() => {
+                        prompt("아래 스마트폰 연동 링크를 복사하여 스마트폰 브라우저에서 열어보세요:", syncUrl);
+                    });
+                } else {
+                    prompt("아래 스마트폰 연동 링크를 복사하여 스마트폰 브라우저에서 열어보세요:", syncUrl);
+                }
+            } catch (err) {
+                alert("링크 생성 실패: " + err.message);
+            }
+        }
+
+        async function manualSyncToCloud() {
+            if (!db) {
+                alert("먼저 Firebase 설정을 입력하고 연동을 시작해주세요.");
+                return;
+            }
+            if (confirm("현재 기기의 데이터를 Firestore 클라우드로 즉시 업로드하시겠습니까?")) {
+                syncLocalToCloud(true);
+                showToast('클라우드로 데이터 업로드를 요청했습니다.');
+            }
+        }
+
+        async function manualSyncFromCloud() {
+            if (!db) {
+                alert("먼저 Firebase 설정을 입력하고 연동을 시작해주세요.");
+                return;
+            }
+            try {
+                updateCloudStatus('syncing', '클라우드 데이터 가져오는 중...');
+                const docRef = db.collection("priest_master_plan").doc("appData");
+                const doc = await docRef.get();
+                if (doc.exists) {
+                    const remoteData = doc.data();
+                    if (remoteData) {
+                        appData = {
+                            darkMode: remoteData.darkMode || false,
+                            dailyRecords: remoteData.dailyRecords || {},
+                            revelationProgress: remoteData.revelationProgress || {},
+                            evangelismProgress: remoteData.evangelismProgress || {}
+                        };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+                        saveToIDB(appData); // IDB에도 동기화
+                        renderContent();
+                        lastSyncTimeString = new Date().toLocaleTimeString('ko-KR');
+                        updateCloudStatus('connected', `실시간 동기화 완료 (${lastSyncTimeString})`);
+                        showToast('클라우드 최신 데이터를 성공적으로 가져왔습니다.');
+                    }
+                } else {
+                    alert("클라우드 Firestore에 저장된 데이터가 없습니다. 먼저 [현재 데이터 클라우드로 올리기]를 실행해보세요.");
+                }
+            } catch (err) {
+                alert("가져오기 실패: " + err.message);
+                updateCloudStatus('error', err.message);
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `priest_master_plan_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('데이터가 백업 파일로 저장되었습니다.');
+        }
+
+        function importData(event) {
+            const fileReader = new FileReader();
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0], "UTF-8");
+                fileReader.onload = function(e) {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (parsed && typeof parsed === 'object') {
+                            appData = parsed;
+                            saveData();
+                            renderContent();
+                            if (appData.darkMode) {
+                                document.documentElement.classList.add('dark');
+                                updateThemeIcons(true);
+                            } else {
+                                document.documentElement.classList.remove('dark');
+                                updateThemeIcons(false);
+                            }
+                            showToast('데이터가 성공적으로 복원되었습니다.');
+                        } else {
+                            alert('올바른 백업 파일 형식이 아닙니다.');
+                        }
+                    } catch (err) {
+                        alert('파일을 읽는 중 오류가 발생했습니다.');
+                    }
+                };
+            }
+        }
+
+        function toggleDarkMode() {
+            appData.darkMode = !appData.darkMode;
+            if (appData.darkMode) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcons(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcons(false);
+            }
+            saveData();
+        }
+
+        function updateThemeIcons(isDark) {
+            const icon = document.getElementById('theme-icon');
+            const mobIcon = document.getElementById('mobile-theme-icon');
+            if (isDark) {
+                if(icon) icon.className = "fa-solid fa-sun";
+                if(mobIcon) mobIcon.className = "fa-solid fa-sun";
+            } else {
+                if(icon) icon.className = "fa-solid fa-moon";
+                if(mobIcon) mobIcon.className = "fa-solid fa-moon";
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const tabs = ['daily', 'revelation', 'evangelism'];
+            tabs.forEach(t => {
+                const navBtn = document.getElementById(`nav-${t}`);
+                const mobBtn = document.getElementById(`mob-nav-${t}`);
+                if (navBtn) {
+                    navBtn.className = t === tab 
+                        ? "w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all bg-orange-500 text-white shadow-lg shadow-orange-500/20"
+                        : "w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-slate-700/50 hover:text-orange-600 dark:hover:text-orange-400";
+                }
+                if (mobBtn) {
+                    mobBtn.className = t === tab
+                        ? "flex flex-col items-center py-1.5 px-3.5 rounded-xl text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 transition"
+                        : "flex flex-col items-center py-1.5 px-3.5 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 transition";
+                }
+            });
+            renderContent();
+        }
+
+        function getCloudSyncBannerInnerContent() {
+            if (currentCloudState === 'connected') {
+                return `
+                    <div class="max-w-5xl mx-auto mb-4 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 rounded-xl px-3.5 py-2 flex items-center justify-between text-xs transition">
+                        <div class="flex items-center space-x-2 truncate mr-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                            <span class="font-semibold text-emerald-800 dark:text-emerald-300 truncate">클라우드 실시간 동기화 작동 중</span>
+                            <span class="text-[11px] text-emerald-600 dark:text-emerald-400 hidden sm:inline">(스마트폰과 노트북이 자동 일치합니다 ${lastSyncTimeString ? '· ' + lastSyncTimeString : ''})</span>
+                        </div>
+                        <button onclick="openFirebaseModal()" class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0">
+                            동기화 관리
+                        </button>
+                    </div>
+                `;
+            } else if (currentCloudState === 'error') {
+                return `
+                    <div class="max-w-5xl mx-auto mb-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl px-3.5 py-2.5 flex items-center justify-between text-xs transition">
+                        <div class="flex items-center space-x-2.5 min-w-0 mr-2">
+                            <span class="w-6 h-6 rounded-lg bg-red-500 text-white flex items-center justify-center text-xs shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                            <div class="min-w-0">
+                                <p class="font-bold text-red-900 dark:text-red-200 text-xs truncate">클라우드 동기화 연결 오류</p>
+                                <p class="text-[11px] text-red-600 dark:text-red-400 truncate">Firebase 설정을 확인해주세요.</p>
+                            </div>
+                        </div>
+                        <button onclick="openFirebaseModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg transition shrink-0">
+                            설정 확인
+                        </button>
+                    </div>
+                `;
+            } else {
+                // local 상태: 미연동 경고 배너
+                return `
+                    <div class="max-w-5xl mx-auto mb-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200/90 dark:border-amber-800/60 rounded-2xl p-3.5 sm:p-4 shadow-xs transition">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div class="flex items-start space-x-3 min-w-0">
+                                <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                                    <i class="fa-solid fa-mobile-screen-button"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                                        <span>스마트폰 ↔ 노트북 실시간 연동이 꺼져 있습니다</span>
+                                        <span class="bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-[10px] px-1.5 py-0.5 rounded-md font-bold">기기 단독 저장</span>
+                                    </h4>
+                                    <p class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                                        현재 체크한 내용은 <b>이 기기에만</b> 저장 중입니다. 스마트폰과 노트북에서 동시에 체크하고 보려면 Firebase 클라우드 연동을 켜주세요!
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                                <button onclick="openFirebaseModal()" class="flex-1 sm:flex-initial px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition shadow-sm shadow-orange-500/20 flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-fire"></i>
+                                    <span>실시간 연동 켜기 (무료)</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function getCloudSyncBannerHTML() {
+            return `<div id="top-cloud-sync-banner-container">${getCloudSyncBannerInnerContent()}</div>`;
+        }
+
+        function renderContent() {
+            const container = document.getElementById('content-container');
+            const banner = getCloudSyncBannerHTML();
+            let tabHtml = '';
+            if (currentTab === 'daily') {
+                tabHtml = getDailyCalendarHTML();
+            } else if (currentTab === 'revelation') {
+                tabHtml = getRevelationMasterHTML();
+            } else if (currentTab === 'evangelism') {
+                tabHtml = getEvangelismMasterHTML();
+            }
+            container.innerHTML = banner + tabHtml;
+        }
+
+        function changeMonth(diff) {
+            currentMonth += diff;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderContent();
+        }
+
+        function getDailyCalendarHTML() {
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const firstDayIndex = (new Date(currentYear, currentMonth, 1).getDay() + 6) % 7; // 월요일 시작 (0=월요일)
+
+            // --- 월간 통계 계산 (말씀 + 기도 합산 및 개별 통계) ---
+            let totalPossibleChecks = daysInMonth * 2;
+            let totalCheckedCount = 0;
+            let wordCount = 0;
+            let prayerCount = 0;
+            let perfectDaysCount = 0;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayStr = String(d).padStart(2, '0');
+                const monthStr = String(currentMonth + 1).padStart(2, '0');
+                const dateKey = `${currentYear}-${monthStr}-${dayStr}`;
+                const record = appData.dailyRecords[dateKey];
+                if (record) {
+                    let dayDone = 0;
+                    if (record.word) { wordCount++; dayDone++; }
+                    if (record.prayer) { prayerCount++; dayDone++; }
+                    totalCheckedCount += dayDone;
+                    if (record.word && record.prayer) {
+                        perfectDaysCount++;
+                    }
+                }
+            }
+
+            const combinedPercent = Math.round((totalCheckedCount / totalPossibleChecks) * 100);
+            const wordPercent = Math.round((wordCount / daysInMonth) * 100);
+            const prayerPercent = Math.round((prayerCount / daysInMonth) * 100);
+
+            // --- 계시록 1~22장 완료 통계 계산 ---
+            let totalRevSubTopics = 0;
+            let completedRevSubTopics = 0;
+            let completedChaptersCount = 0;
+
+            revelationChapters.forEach(chap => {
+                let chapTotal = chap.subs.length;
+                let chapDone = 0;
+                totalRevSubTopics += chapTotal;
+                chap.subs.forEach((sub, sIdx) => {
+                    const key = `${chap.id}_${sIdx}`;
+                    const prog = appData.revelationProgress[key];
+                    if (prog && prog.script && prog.speech) {
+                        completedRevSubTopics++;
+                        chapDone++;
+                    }
+                });
+                if (chapDone === chapTotal) {
+                    completedChaptersCount++;
+                }
+            });
+
+            const revPercent = Math.round((completedRevSubTopics / totalRevSubTopics) * 100);
+
+            let calendarGridHTML = '';
+            // 빈 칸 (이전 달 공백)
+            for (let i = 0; i < firstDayIndex; i++) {
+                calendarGridHTML += `<div class="aspect-square bg-slate-50/40 dark:bg-slate-900/30 rounded-lg sm:rounded-xl opacity-30"></div>`;
+            }
+
+            // 날짜 셀 생성 (세련된 미니멀 디자인)
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayStr = String(d).padStart(2, '0');
+                const monthStr = String(currentMonth + 1).padStart(2, '0');
+                const dateKey = `${currentYear}-${monthStr}-${dayStr}`;
+                const record = appData.dailyRecords[dateKey] || { word: false, prayer: false };
+                const isSelected = selectedDateStr === dateKey;
+                const isComplete = record.word && record.prayer;
+                const isPartial = (record.word && !record.prayer) || (!record.word && record.prayer);
+                const isToday = (todayStr === dateKey);
+
+                const dayOfWeek = (firstDayIndex + d - 1) % 7; // 0=Mon, 5=Sat, 6=Sun
+                const isSunday = dayOfWeek === 6;
+                const isSaturday = dayOfWeek === 5;
+
+                let dayColorClass = "text-slate-800 dark:text-slate-200";
+                if (isSunday) dayColorClass = "text-rose-600 dark:text-rose-400";
+                else if (isSaturday) dayColorClass = "text-sky-600 dark:text-sky-400";
+
+                // 세련된 배경 & 테두리 스타일
+                let cellBgClass = "bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/60";
+                if (isComplete) {
+                    cellBgClass = "bg-orange-50/70 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/40 shadow-xs";
+                } else if (isPartial) {
+                    cellBgClass = "bg-slate-50/80 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/70";
+                }
+
+                let selectClass = isSelected
+                    ? "ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-slate-900 shadow-md scale-[1.03] z-10"
+                    : "hover:border-orange-300 dark:hover:border-slate-500";
+
+                calendarGridHTML += `
+                    <div onclick="selectDate('${dateKey}')" class="aspect-square border rounded-lg sm:rounded-xl flex flex-col justify-between p-1 sm:p-1.5 cursor-pointer transition select-none ${cellBgClass} ${selectClass}">
+                        <div class="flex items-center justify-between leading-none">
+                            <span class="text-[11px] sm:text-xs font-bold ${dayColorClass}">${d}</span>
+                            ${isComplete ? '<i class="fa-solid fa-check text-[9px] text-orange-500 font-bold"></i>' : (isToday ? '<span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>' : '')}
+                        </div>
+                        <div class="flex items-center justify-center gap-1 pb-0.5 sm:pb-1">
+                            <span title="말씀" class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-transform ${record.word ? 'bg-orange-500 shadow-sm shadow-orange-500/50 scale-110' : 'bg-slate-200 dark:bg-slate-700'}"></span>
+                            <span title="기도" class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-transform ${record.prayer ? 'bg-indigo-500 shadow-sm shadow-indigo-500/50 scale-110' : 'bg-slate-200 dark:bg-slate-700'}"></span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const currentRecord = appData.dailyRecords[selectedDateStr] || { word: false, prayer: false };
+
+            return `
+                <div class="max-w-5xl mx-auto space-y-3.5 sm:space-y-5">
+                    <!-- 통계 요약 카드 (말씀+기도 합산 및 계시록 현황) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-5">
+                        <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-3">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2.5">
+                                <div class="min-w-0 pr-2">
+                                    <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base flex items-center truncate">
+                                        <i class="fa-solid fa-chart-line text-orange-500 mr-2 shrink-0"></i>
+                                        <span class="truncate">${currentYear}년 ${currentMonth + 1}월 습관 통계</span>
+                                    </h3>
+                                    <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">말씀과 기도 종합 이행률</p>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 text-xs font-bold shrink-0">
+                                    달성률 ${combinedPercent}%
+                                </span>
+                            </div>
+
+                            <div class="space-y-2.5">
+                                <div class="space-y-1">
+                                    <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-500"></span>📖 말씀 달성</span>
+                                        <span class="text-orange-600 dark:text-orange-400 font-bold">${wordCount}일 / ${daysInMonth}일 (${wordPercent}%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-orange-500 h-full rounded-full transition-all duration-500" style="width: ${wordPercent}%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>🙏 기도 달성</span>
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-bold">${prayerCount}일 / ${daysInMonth}일 (${prayerPercent}%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${prayerPercent}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pt-2 text-[11px] text-slate-400 flex justify-between border-t border-slate-100 dark:border-slate-700/40">
+                                <span>완벽 달성: <b class="text-slate-700 dark:text-slate-200">${perfectDaysCount}일</b></span>
+                                <span>총 이행: <b class="text-slate-700 dark:text-slate-200">${totalCheckedCount}회</b></span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-3">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2.5">
+                                <div class="min-w-0 pr-2">
+                                    <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base flex items-center truncate">
+                                        <i class="fa-solid fa-book-bible text-orange-500 mr-2 shrink-0"></i>
+                                        <span class="truncate">계시록 1~22장 완료 현황</span>
+                                    </h3>
+                                    <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">전체 22개 장 마스터 진행률</p>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold shrink-0">
+                                    ${completedChaptersCount} / 22장 완료
+                                </span>
+                            </div>
+
+                            <div class="space-y-2.5">
+                                <div class="space-y-1">
+                                    <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                        <span>소주제 암송 및 스피치 완성도</span>
+                                        <span class="text-emerald-600 dark:text-emerald-400 font-bold">${completedRevSubTopics} / ${totalRevSubTopics} (${revPercent}%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${revPercent}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pt-2 text-[11px] text-slate-400 flex justify-between items-center border-t border-slate-100 dark:border-slate-700/40">
+                                <span>미완료 장수: <b class="text-slate-700 dark:text-slate-200">${22 - completedChaptersCount}개 장</b></span>
+                                <span class="text-orange-600 dark:text-orange-400 font-semibold cursor-pointer hover:underline text-xs" onclick="switchTab('revelation')">계시록 작성 &rarr;</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 캘린더 카드 -->
+                    <div class="bg-white dark:bg-slate-800 p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-3.5">
+                        <!-- 캘린더 상단 헤더 및 범례 -->
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2.5 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                            <div class="flex items-center space-x-2">
+                                <button onclick="changeMonth(-1)" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 transition">
+                                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                                </button>
+                                <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white px-1.5">${currentYear}년 ${currentMonth + 1}월</h3>
+                                <button onclick="changeMonth(1)" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 transition">
+                                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+
+                            <!-- 세련된 미니 범례 -->
+                            <div class="flex items-center gap-1.5 sm:gap-2 text-xs font-medium flex-wrap justify-center">
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300">
+                                    <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                                    <span class="text-[11px] font-semibold">말씀 ${wordCount}일</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300">
+                                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                    <span class="text-[11px] font-semibold">기도 ${prayerCount}일</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300">
+                                    <i class="fa-solid fa-crown text-[10px] text-amber-500"></i>
+                                    <span class="text-[11px] font-semibold">완벽 ${perfectDaysCount}일</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 요일 헤더 (월화수목금토일) -->
+                        <div class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[11px] sm:text-xs font-bold mb-1">
+                            <div class="text-slate-500 dark:text-slate-400 py-1">월</div>
+                            <div class="text-slate-500 dark:text-slate-400 py-1">화</div>
+                            <div class="text-slate-500 dark:text-slate-400 py-1">수</div>
+                            <div class="text-slate-500 dark:text-slate-400 py-1">목</div>
+                            <div class="text-slate-500 dark:text-slate-400 py-1">금</div>
+                            <div class="text-sky-500 py-1 font-bold">토</div>
+                            <div class="text-rose-500 py-1 font-bold">일</div>
+                        </div>
+
+                        <!-- 캘린더 격자 그리드 -->
+                        <div class="grid grid-cols-7 gap-1 sm:gap-2">
+                            ${calendarGridHTML}
+                        </div>
+                    </div>
+
+                    <!-- 1줄 컴팩트 습관 체크 바 -->
+                    <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                                <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                                    <span class="text-orange-600 dark:text-orange-400">${selectedDateStr}</span> 습관 체크
+                                </h3>
+                            </div>
+                            <span class="text-[11px] text-slate-400 font-medium">탭하여 완료/해제</span>
+                        </div>
+
+                        <!-- 1줄에 다 들어가는 말씀 / 기도 토글 버튼 -->
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+                            <button type="button" onclick="toggleDailyHabit('word')" class="relative flex items-center justify-between p-2.5 sm:p-3 rounded-xl border transition-all active:scale-[0.98] select-none ${currentRecord.word ? 'bg-orange-500/10 border-orange-500/80 text-orange-600 dark:text-orange-400 font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
+                                <div class="flex items-center space-x-2 truncate">
+                                    <i class="fa-solid fa-book-open text-sm ${currentRecord.word ? 'text-orange-500' : 'text-slate-400'}"></i>
+                                    <span class="text-xs sm:text-sm truncate">말씀 (계시록)</span>
+                                </div>
+                                <div class="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition ${currentRecord.word ? 'bg-orange-500 text-white shadow-sm' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
+                                    <i class="fa-solid fa-check text-[11px]"></i>
+                                </div>
+                            </button>
+
+                            <button type="button" onclick="toggleDailyHabit('prayer')" class="relative flex items-center justify-between p-2.5 sm:p-3 rounded-xl border transition-all active:scale-[0.98] select-none ${currentRecord.prayer ? 'bg-indigo-500/10 border-indigo-500/80 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
+                                <div class="flex items-center space-x-2 truncate">
+                                    <i class="fa-solid fa-hands-praying text-sm ${currentRecord.prayer ? 'text-indigo-500' : 'text-slate-400'}"></i>
+                                    <span class="text-xs sm:text-sm truncate">집중 기도</span>
+                                </div>
+                                <div class="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition ${currentRecord.prayer ? 'bg-indigo-500 text-white shadow-sm' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
+                                    <i class="fa-solid fa-check text-[11px]"></i>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectDate(dateStr) {
+            selectedDateStr = dateStr;
+            renderContent();
+        }
+
+        function toggleDailyHabit(key) {
+            if (!appData.dailyRecords[selectedDateStr]) {
+                appData.dailyRecords[selectedDateStr] = { word: false, prayer: false };
+            }
+            const currentVal = !!appData.dailyRecords[selectedDateStr][key];
+            appData.dailyRecords[selectedDateStr][key] = !currentVal;
+            saveData();
+            renderContent();
+            showToast(key === 'word' 
+                ? (!currentVal ? '📖 말씀 완료!' : '말씀 완료 취소') 
+                : (!currentVal ? '🙏 기도 완료!' : '기도 완료 취소')
+            );
+        }
+
+        function updateDailyHabit(key, val) {
+            if (!appData.dailyRecords[selectedDateStr]) {
+                appData.dailyRecords[selectedDateStr] = { word: false, prayer: false };
+            }
+            appData.dailyRecords[selectedDateStr][key] = val;
+            saveData();
+            renderContent();
+            showToast('일일 습관이 저장되었습니다.');
+        }
+
+        function getRevelationMasterHTML() {
+            let chaptersHTML = revelationChapters.map(chap => {
+                let totalSubs = chap.subs.length;
+                let completedSubs = 0;
+                chap.subs.forEach((sub, sIdx) => {
+                    const key = `${chap.id}_${sIdx}`;
+                    const prog = appData.revelationProgress[key];
+                    if (prog && prog.script && prog.speech) {
+                        completedSubs++;
+                    }
+                });
+                const percent = Math.round((completedSubs / totalSubs) * 100);
+
+                return `
+                    <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-orange-400 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="flex items-start space-x-3 flex-1 min-w-0 w-full sm:w-auto">
+                            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-100 dark:bg-slate-700 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
+                                ${chap.id}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">제${chap.id}장: ${chap.title}</h4>
+                                <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">소주제 ${totalSubs}개 교안/스피치 빌더</p>
+                                <div class="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-2 max-w-md">
+                                    <div class="bg-orange-500 h-full rounded-full transition-all duration-300" style="width: ${percent}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700/50">
+                            <span class="text-xs font-bold text-orange-600 dark:text-orange-400 sm:hidden">완성도 ${percent}%</span>
+                            <button onclick="openRevModal(${chap.id})" class="flex-1 sm:flex-initial px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-xl text-xs sm:text-sm transition shadow-md shadow-orange-500/20 flex items-center justify-center space-x-1.5">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                <span>교안/파일 작성</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="max-w-5xl mx-auto space-y-3.5 sm:space-y-5">
+                    <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5">
+                        <div>
+                            <span class="text-[10px] sm:text-[11px] font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider">REVELATION MASTER</span>
+                            <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">계시록 증거</h2>
+                            <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">각 장별 소주제 교안, 스크립트, 스피치와 멀티미디어 파일을 첨부하세요.</p>
+                        </div>
+                        <div class="bg-orange-50 dark:bg-slate-700/50 px-3 py-1 rounded-xl text-center self-stretch sm:self-auto flex sm:flex-col justify-between items-center">
+                            <span class="text-[10px] text-slate-400">전체 장수</span>
+                            <span class="text-xs font-bold text-orange-600 dark:text-orange-400">22개 장 플랜</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2.5 sm:space-y-3">
+                        ${chaptersHTML}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ====================================================
+        // 🖼️ 첨부 파일 / 사진 미리보기 & 다운로드 전역 관리
+        // ====================================================
+        function openFilePreview(file) {
+            if (!file) return;
+            const modal = document.getElementById('file-preview-modal');
+            const nameEl = document.getElementById('preview-modal-filename');
+            const sizeEl = document.getElementById('preview-modal-filesize');
+            const bodyEl = document.getElementById('preview-modal-body');
+            const dlBtn = document.getElementById('preview-modal-download-btn');
+            const iconEl = document.getElementById('preview-modal-icon');
+
+            nameEl.innerText = file.name || '첨부 파일';
+            dlBtn.setAttribute('href', file.data || '#');
+            dlBtn.setAttribute('download', file.name || 'download');
+
+            const type = file.type || '';
+            if (type.startsWith('image/')) {
+                iconEl.innerHTML = '<i class="fa-solid fa-file-image text-blue-500"></i>';
+                sizeEl.innerText = '이미지 파일 (확대/미리보기)';
+                bodyEl.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-2 max-w-full">
+                        <img src="${file.data}" alt="${file.name}" class="max-h-[60vh] max-w-full rounded-xl object-contain shadow-md border border-slate-200 dark:border-slate-700">
+                    </div>
+                `;
+            } else if (type.startsWith('video/')) {
+                iconEl.innerHTML = '<i class="fa-solid fa-file-video text-purple-500"></i>';
+                sizeEl.innerText = '동영상 파일 재생';
+                bodyEl.innerHTML = `
+                    <div class="w-full flex justify-center p-2">
+                        <video controls autoplay playsinline src="${file.data}" class="max-h-[60vh] max-w-full rounded-xl shadow-md border border-slate-200 dark:border-slate-700"></video>
+                    </div>
+                `;
+            } else if (type.startsWith('audio/')) {
+                iconEl.innerHTML = '<i class="fa-solid fa-file-audio text-emerald-500"></i>';
+                sizeEl.innerText = '음성/오디오 재생';
+                bodyEl.innerHTML = `
+                    <div class="p-8 text-center space-y-4 max-w-md w-full">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl shadow-inner">
+                            <i class="fa-solid fa-headphones"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">${file.name}</h4>
+                        <audio controls src="${file.data}" class="w-full"></audio>
+                    </div>
+                `;
+            } else {
+                iconEl.innerHTML = '<i class="fa-solid fa-file text-orange-500"></i>';
+                sizeEl.innerText = '일반 파일';
+                bodyEl.innerHTML = `
+                    <div class="p-8 text-center space-y-3">
+                        <div class="w-16 h-16 mx-auto rounded-2xl bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 flex items-center justify-center text-3xl">
+                            <i class="fa-solid fa-file"></i>
+                        </div>
+                        <p class="font-bold text-slate-800 dark:text-slate-100 text-sm">${file.name}</p>
+                        <p class="text-xs text-slate-400">화면에서 바로 볼 수 없는 형식입니다.<br>아래 [다운로드 받기] 버튼을 눌러 저장하세요.</p>
+                    </div>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeFilePreviewModal() {
+            const modal = document.getElementById('file-preview-modal');
+            const bodyEl = document.getElementById('preview-modal-body');
+            if (bodyEl) {
+                const media = bodyEl.querySelectorAll('video, audio');
+                media.forEach(m => m.pause());
+                bodyEl.innerHTML = '';
+            }
+            modal.classList.add('hidden');
+        }
+
+        function downloadFileDirect(fileName, fileData) {
+            if (!fileData) return;
+            const a = document.createElement('a');
+            a.href = fileData;
+            a.download = fileName || 'download';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            showToast(`${fileName} 다운로드를 시작합니다.`);
+        }
+
+        function previewRevFile(chapId, sIdx, fIdx) {
+            const key = `${chapId}_${sIdx}`;
+            const file = appData.revelationProgress?.[key]?.files?.[fIdx];
+            if (file) openFilePreview(file);
+        }
+
+        function downloadRevFile(chapId, sIdx, fIdx) {
+            const key = `${chapId}_${sIdx}`;
+            const file = appData.revelationProgress?.[key]?.files?.[fIdx];
+            if (file) downloadFileDirect(file.name, file.data);
+        }
+
+        function previewEvangelismFile(stageId, fIdx) {
+            const file = appData.evangelismProgress?.[stageId]?.files?.[fIdx];
+            if (file) openFilePreview(file);
+        }
+
+        function downloadEvangelismFile(stageId, fIdx) {
+            const file = appData.evangelismProgress?.[stageId]?.files?.[fIdx];
+            if (file) downloadFileDirect(file.name, file.data);
+        }
+
+        function openRevModal(chapId) {
+            currentRevChapterId = chapId;
+            const chap = revelationChapters.find(c => c.id === chapId);
+            document.getElementById('rev-modal-chap-badge').innerText = `제${chap.id}장`;
+            document.getElementById('rev-modal-title').innerText = `${chap.title}`;
+
+            let subHtml = chap.subs.map((sub, sIdx) => {
+                const key = `${chapId}_${sIdx}`;
+                const data = appData.revelationProgress[key] || { lesson: false, script: false, speech: false, text: '', files: [] };
+
+                let filesHtml = (data.files || []).map((file, fIdx) => {
+                    const isImg = file.type && file.type.startsWith('image/');
+                    const isVid = file.type && file.type.startsWith('video/');
+                    const isAud = file.type && file.type.startsWith('audio/');
+                    const iconClass = isImg ? 'fa-file-image text-blue-500' : isVid ? 'fa-file-video text-purple-500' : isAud ? 'fa-file-audio text-emerald-500' : 'fa-file text-orange-500';
+
+                    const thumbHtml = isImg && file.data ? 
+                        `<img src="${file.data}" alt="${file.name}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs">` :
+                        `<div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700/80 flex items-center justify-center shrink-0 text-base"><i class="fa-solid ${iconClass}"></i></div>`;
+
+                    return `
+                        <div class="group flex items-center justify-between bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs hover:border-orange-400 dark:hover:border-orange-500/50 transition">
+                            <div onclick="previewRevFile(${chapId}, ${sIdx}, ${fIdx})" class="flex items-center space-x-2.5 min-w-0 flex-1 cursor-pointer select-none">
+                                ${thumbHtml}
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition">${file.name}</p>
+                                    <p class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                        <span class="text-orange-500 font-medium"><i class="fa-solid fa-eye text-[9px]"></i> 클릭하여 보기</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1 shrink-0 ml-2">
+                                <button type="button" onclick="previewRevFile(${chapId}, ${sIdx}, ${fIdx})" title="미리보기" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 flex items-center justify-center text-xs transition">
+                                    <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                </button>
+                                <button type="button" onclick="downloadRevFile(${chapId}, ${sIdx}, ${fIdx})" title="다운로드" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center text-xs transition">
+                                    <i class="fa-solid fa-download"></i>
+                                </button>
+                                <button type="button" onclick="removeRevFile(${chapId}, ${sIdx}, ${fIdx})" title="삭제" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-red-100 dark:hover:bg-red-900/40 text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center text-xs transition">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="bg-slate-50 dark:bg-slate-900/50 p-3.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                            <h4 class="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm leading-snug"><span class="text-orange-500 mr-1.5 font-bold">${sIdx + 1}.</span>${sub}</h4>
+                            <div class="flex items-center gap-1.5 text-[11px] font-semibold w-full sm:w-auto">
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1 rounded-lg border transition ${data.lesson ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}">
+                                    <input type="checkbox" ${data.lesson ? 'checked' : ''} onchange="updateSubProp(${chapId}, ${sIdx}, 'lesson', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
+                                    <span>교안</span>
+                                </label>
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1 rounded-lg border transition ${data.script ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}">
+                                    <input type="checkbox" ${data.script ? 'checked' : ''} onchange="updateSubProp(${chapId}, ${sIdx}, 'script', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
+                                    <span>스크립트</span>
+                                </label>
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1 rounded-lg border transition ${data.speech ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}">
+                                    <input type="checkbox" ${data.speech ? 'checked' : ''} onchange="updateSubProp(${chapId}, ${sIdx}, 'speech', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
+                                    <span>스피치</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <textarea oninput="updateSubText(${chapId}, ${sIdx}, this.value)" rows="2.5" placeholder="이 소주제에 대한 핵심 교안 및 스피치 메모를 작성하세요..." class="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500">${data.text || ''}</textarea>
+
+                        <div class="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <i class="fa-solid fa-paperclip text-orange-500"></i> 첨부 파일 (사진/동영상/음성)
+                                </span>
+                                <label class="px-2.5 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 rounded-lg text-[11px] font-semibold cursor-pointer hover:bg-orange-200 transition flex items-center gap-1">
+                                    <i class="fa-solid fa-plus"></i> 추가
+                                    <input type="file" accept="image/*,video/*,audio/*" onchange="handleRevFileUpload(event, ${chapId}, ${sIdx})" class="hidden">
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                ${filesHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('subtopics-container').innerHTML = subHtml;
+            document.getElementById('rev-modal').classList.remove('hidden');
+        }
+
+        function closeRevModal() {
+            document.getElementById('rev-modal').classList.add('hidden');
+            renderContent();
+        }
+
+        function updateSubProp(chapId, sIdx, prop, val) {
+            const key = `${chapId}_${sIdx}`;
+            if (!appData.revelationProgress[key]) {
+                appData.revelationProgress[key] = { lesson: false, script: false, speech: false, text: '', files: [] };
+            }
+            appData.revelationProgress[key][prop] = val;
+            saveData();
+            showToast('체크리스트가 저장되었습니다.');
+        }
+
+        function updateSubText(chapId, sIdx, val) {
+            const key = `${chapId}_${sIdx}`;
+            if (!appData.revelationProgress[key]) {
+                appData.revelationProgress[key] = { lesson: false, script: false, speech: false, text: '', files: [] };
+            }
+            appData.revelationProgress[key].text = val;
+            saveData();
+        }
+
+        function handleRevFileUpload(event, chapId, sIdx) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 800 * 1024) {
+                if (!confirm(`⚠️ 선택한 파일 크기가 약 ${Math.round(file.size / 1024)}KB 입니다.\nFirestore 클라우드 문서 용량 제한(1MB)으로 인해 파일이 너무 크면 클라우드 동기화가 실패할 수 있습니다. 계속 첨부하시겠습니까?\n(800KB 이하의 가벼운 이미지 파일을 권장합니다.)`)) {
+                    event.target.value = '';
+                    return;
+                }
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const key = `${chapId}_${sIdx}`;
+                if (!appData.revelationProgress[key]) {
+                    appData.revelationProgress[key] = { lesson: false, script: false, speech: false, text: '', files: [] };
+                }
+                if (!appData.revelationProgress[key].files) {
+                    appData.revelationProgress[key].files = [];
+                }
+                appData.revelationProgress[key].files.push({
+                    name: file.name,
+                    type: file.type,
+                    data: e.target.result
+                });
+                saveData();
+                openRevModal(chapId);
+                showToast('파일이 첨부되었습니다.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeRevFile(chapId, sIdx, fIdx) {
+            const key = `${chapId}_${sIdx}`;
+            if (appData.revelationProgress[key] && appData.revelationProgress[key].files) {
+                appData.revelationProgress[key].files.splice(fIdx, 1);
+                saveData();
+                openRevModal(chapId);
+                showToast('첨부 파일이 삭제되었습니다.');
+            }
+        }
+
+        function getEvangelismMasterHTML() {
+            let stagesHTML = evangelismStages.map((stage, idx) => {
+                const stageData = appData.evangelismProgress?.[stage.id] || { lesson: false, script: false, speech: false, memo: '', files: [] };
+                const isFinished = stageData.lesson && stageData.script && stageData.speech;
+
+                let filesHtml = (stageData.files || []).map((file, fIdx) => {
+                    const isImg = file.type && file.type.startsWith('image/');
+                    const isVid = file.type && file.type.startsWith('video/');
+                    const isAud = file.type && file.type.startsWith('audio/');
+                    const iconClass = isImg ? 'fa-file-image text-blue-500' : isVid ? 'fa-file-video text-purple-500' : isAud ? 'fa-file-audio text-emerald-500' : 'fa-file text-orange-500';
+
+                    const thumbHtml = isImg && file.data ? 
+                        `<img src="${file.data}" alt="${file.name}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs">` :
+                        `<div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700/80 flex items-center justify-center shrink-0 text-base"><i class="fa-solid ${iconClass}"></i></div>`;
+
+                    return `
+                        <div class="group flex items-center justify-between bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs hover:border-orange-400 dark:hover:border-orange-500/50 transition">
+                            <div onclick="previewEvangelismFile('${stage.id}', ${fIdx})" class="flex items-center space-x-2.5 min-w-0 flex-1 cursor-pointer select-none">
+                                ${thumbHtml}
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition">${file.name}</p>
+                                    <p class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                        <span class="text-orange-500 font-medium"><i class="fa-solid fa-eye text-[9px]"></i> 클릭하여 보기</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1 shrink-0 ml-2">
+                                <button type="button" onclick="previewEvangelismFile('${stage.id}', ${fIdx})" title="미리보기" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 flex items-center justify-center text-xs transition">
+                                    <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                </button>
+                                <button type="button" onclick="downloadEvangelismFile('${stage.id}', ${fIdx})" title="다운로드" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center text-xs transition">
+                                    <i class="fa-solid fa-download"></i>
+                                </button>
+                                <button type="button" onclick="removeEvangelismFile('${stage.id}', ${fIdx})" title="삭제" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-red-100 dark:hover:bg-red-900/40 text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center text-xs transition">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-xl sm:rounded-2xl border ${isFinished ? 'border-emerald-500/50 bg-emerald-50/10' : 'border-slate-200 dark:border-slate-700'} shadow-sm space-y-3">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5">
+                            <div class="flex items-center space-x-3 w-full sm:w-auto">
+                                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-100 dark:bg-slate-700 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
+                                    0${idx + 1}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">${stage.name} 단계</h4>
+                                        ${isFinished ? '<span class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0">완료</span>' : ''}
+                                    </div>
+                                    <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">${stage.desc}</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-1.5 w-full sm:w-auto text-[11px] font-semibold">
+                                <label class="flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1.5 rounded-lg border transition ${stageData.lesson ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500'}">
+                                    <input type="checkbox" ${stageData.lesson ? 'checked' : ''} onchange="updateEvangelismStage('${stage.id}', 'lesson', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
+                                    <span>교안</span>
+                                </label>
+                                <label class="flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1.5 rounded-lg border transition ${stageData.script ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500'}">
+                                    <input type="checkbox" ${stageData.script ? 'checked' : ''} onchange="updateEvangelismStage('${stage.id}', 'script', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
+                                    <span>스크립트</span>
+                                </label>
+                                <label class="flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1.5 rounded-lg border transition ${stageData.speech ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500'}">
+                                    <input type="checkbox" ${stageData.speech ? 'checked' : ''} onchange="updateEvangelismStage('${stage.id}', 'speech', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
+                                    <span>스피치</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <textarea oninput="updateEvangelismMemo('${stage.id}', this.value)" rows="2.5" placeholder="${stage.name} 단계 핵심 상담 스크립트 및 시나리오를 작성하세요..." class="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500">${stageData.memo || ''}</textarea>
+                        </div>
+
+                        <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <i class="fa-solid fa-paperclip text-orange-500"></i> 첨부 파일 (사진/동영상/음성)
+                                </span>
+                                <label class="px-2.5 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 rounded-lg text-[11px] font-semibold cursor-pointer hover:bg-orange-200 transition flex items-center gap-1">
+                                    <i class="fa-solid fa-plus"></i> 추가
+                                    <input type="file" accept="image/*,video/*,audio/*" onchange="handleEvangelismFileUpload(event, '${stage.id}')" class="hidden">
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                ${filesHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="max-w-5xl mx-auto space-y-5">
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <span class="text-[11px] font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider">EVANGELISM MASTER</span>
+                        <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-0.5">전도 마스터</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">온라인 찾기부터 노방, 상담, 따기, 복음방까지 5가지 단계별 교안, 스크립트와 멀티미디어 파일을 마스터하세요.</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        ${stagesHTML}
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateEvangelismStage(stageId, prop, val) {
+            if (!appData.evangelismProgress) appData.evangelismProgress = {};
+            if (!appData.evangelismProgress[stageId]) {
+                appData.evangelismProgress[stageId] = { lesson: false, script: false, speech: false, memo: '', files: [] };
+            }
+            appData.evangelismProgress[stageId][prop] = val;
+            saveData();
+            showToast('전도 마스터 단계가 저장되었습니다.');
+        }
+
+        function updateEvangelismMemo(stageId, val) {
+            if (!appData.evangelismProgress) appData.evangelismProgress = {};
+            if (!appData.evangelismProgress[stageId]) {
+                appData.evangelismProgress[stageId] = { lesson: false, script: false, speech: false, memo: '', files: [] };
+            }
+            appData.evangelismProgress[stageId].memo = val;
+            saveData();
+        }
+
+        function handleEvangelismFileUpload(event, stageId) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 800 * 1024) {
+                if (!confirm(`⚠️ 선택한 파일 크기가 약 ${Math.round(file.size / 1024)}KB 입니다.\nFirestore 클라우드 문서 용량 제한(1MB)으로 인해 파일이 너무 크면 클라우드 동기화가 실패할 수 있습니다. 계속 첨부하시겠습니까?\n(800KB 이하의 가벼운 이미지 파일을 권장합니다.)`)) {
+                    event.target.value = '';
+                    return;
+                }
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (!appData.evangelismProgress) appData.evangelismProgress = {};
+                if (!appData.evangelismProgress[stageId]) {
+                    appData.evangelismProgress[stageId] = { lesson: false, script: false, speech: false, memo: '', files: [] };
+                }
+                if (!appData.evangelismProgress[stageId].files) {
+                    appData.evangelismProgress[stageId].files = [];
+                }
+                appData.evangelismProgress[stageId].files.push({
+                    name: file.name,
+                    type: file.type,
+                    data: e.target.result
+                });
+                saveData();
+                renderContent();
+                showToast('파일이 첨부되었습니다.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeEvangelismFile(stageId, fIdx) {
+            if (appData.evangelismProgress && appData.evangelismProgress[stageId] && appData.evangelismProgress[stageId].files) {
+                appData.evangelismProgress[stageId].files.splice(fIdx, 1);
+                saveData();
+                renderContent();
+                showToast('첨부 파일이 삭제되었습니다.');
+            }
+        }
+
+        function showToast(msg, duration) {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            msgEl.innerText = msg;
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, duration || 2500);
+        }
+    </script>
+</body>
+</html>
