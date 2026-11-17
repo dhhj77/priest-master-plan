@@ -265,14 +265,19 @@
                 <!-- Dynamic Content (Image, Video, Audio, or File Icon) -->
             </div>
             <!-- Preview Footer -->
-            <div class="p-3.5 sm:p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/80">
-                <button onclick="closeFilePreviewModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition">
-                    닫기
-                </button>
-                <a id="preview-modal-download-btn" href="#" download="" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-orange-500/25 flex items-center gap-1.5">
-                    <i class="fa-solid fa-download"></i>
-                    <span>다운로드 받기</span>
-                </a>
+            <div class="p-3 sm:p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <button type="button" onclick="closeFilePreviewModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition">
+                        닫기
+                    </button>
+                    <button type="button" id="preview-modal-download-btn" onclick="handleCurrentPreviewDownload()" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-orange-500/25 flex items-center gap-1.5 active:scale-95">
+                        <i class="fa-solid fa-download"></i>
+                        <span>사진(앨범) / 파일로 저장</span>
+                    </button>
+                </div>
+                <p class="text-[10px] text-center text-slate-400 dark:text-slate-500 leading-tight">
+                    💡 스마트폰에서는 위 버튼을 누른 후 [이미지 저장]이나 [파일에 저장]을 선택하세요. (사진을 길게 꾹 눌러 저장할 수도 있습니다)
+                </p>
             </div>
         </div>
     </div>
@@ -1557,18 +1562,112 @@
         // ====================================================
         // 🖼️ 첨부 파일 / 사진 미리보기 & 다운로드 전역 관리
         // ====================================================
+        let currentPreviewFile = null;
+
+        // Data URL -> Blob 변환 함수 (모바일 및 PC 호환)
+        function dataURLtoBlob(dataurl) {
+            try {
+                const arr = dataurl.split(',');
+                const mime = arr[0].match(/:(.*?);/)[1];
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                return new Blob([u8arr], { type: mime });
+            } catch(e) {
+                console.error('Blob 변환 에러:', e);
+                return null;
+            }
+        }
+
+        // 스마트폰 사진(앨범) / 파일 폴더 저장 및 PC 다운로드 완벽 처리 함수
+        async function downloadOrSaveFile(fileName, fileData, fileType) {
+            if (!fileData) {
+                alert('파일 데이터가 없습니다.');
+                return;
+            }
+
+            const blob = dataURLtoBlob(fileData);
+            const mimeType = fileType || (blob ? blob.type : 'application/octet-stream');
+            const safeFileName = fileName || 'download_file';
+
+            // 1. 스마트폰 Web Share API (사진 앱/앨범에 저장 또는 파일 앱에 저장 네이티브 지원)
+            if (blob && navigator.share && navigator.canShare) {
+                try {
+                    const fileObj = new File([blob], safeFileName, { type: mimeType });
+                    if (navigator.canShare({ files: [fileObj] })) {
+                        await navigator.share({
+                            files: [fileObj],
+                            title: safeFileName
+                        });
+                        showToast('저장 메뉴가 실행되었습니다.');
+                        return;
+                    }
+                } catch (shareErr) {
+                    if (shareErr.name === 'AbortError') return; // 사용자가 닫은 경우
+                    console.warn('Share API 오류, 일반 Blob 다운로드로 전환:', shareErr);
+                }
+            }
+
+            // 2. Blob 객체 URL 다운로드 (PC 및 안드로이드/일반 브라우저)
+            if (blob) {
+                try {
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = blobUrl;
+                    a.download = safeFileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        try {
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(blobUrl);
+                        } catch(e){}
+                    }, 2000);
+                    showToast(`${safeFileName} 저장을 시작합니다.`);
+                    return;
+                } catch (blobErr) {
+                    console.warn('Blob URL 다운로드 실패:', blobErr);
+                }
+            }
+
+            // 3. 최후의 수단: 새 탭/창 열기 (사용자가 길게 눌러 사진에 저장)
+            try {
+                const win = window.open();
+                if (win) {
+                    win.document.write(`
+                        <html><head><title>${safeFileName}</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+                        <body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#111;color:#fff;font-family:sans-serif;padding:20px;box-sizing:border-box;">
+                            <img src="${fileData}" style="max-width:100%;max-height:80vh;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+                            <p style="margin-top:20px;font-size:14px;text-align:center;">💡 사진을 <b>길게 꾹 누른 뒤 [사진 앱에 저장]</b> 또는 [이미지 저장]을 선택하세요.</p>
+                        </body></html>
+                    `);
+                    return;
+                }
+            } catch(e){}
+
+            alert('다운로드를 시작할 수 없습니다. 이미지를 길게 꾹 눌러 [사진에 저장]을 이용해주세요.');
+        }
+
+        function handleCurrentPreviewDownload() {
+            if (currentPreviewFile) {
+                downloadOrSaveFile(currentPreviewFile.name, currentPreviewFile.data, currentPreviewFile.type);
+            }
+        }
+
         function openFilePreview(file) {
             if (!file) return;
+            currentPreviewFile = file;
             const modal = document.getElementById('file-preview-modal');
             const nameEl = document.getElementById('preview-modal-filename');
             const sizeEl = document.getElementById('preview-modal-filesize');
             const bodyEl = document.getElementById('preview-modal-body');
-            const dlBtn = document.getElementById('preview-modal-download-btn');
             const iconEl = document.getElementById('preview-modal-icon');
 
             nameEl.innerText = file.name || '첨부 파일';
-            dlBtn.setAttribute('href', file.data || '#');
-            dlBtn.setAttribute('download', file.name || 'download');
 
             const type = file.type || '';
             if (type.startsWith('image/')) {
@@ -1576,7 +1675,7 @@
                 sizeEl.innerText = '이미지 파일 (확대/미리보기)';
                 bodyEl.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-2 max-w-full">
-                        <img src="${file.data}" alt="${file.name}" class="max-h-[60vh] max-w-full rounded-xl object-contain shadow-md border border-slate-200 dark:border-slate-700">
+                        <img src="${file.data}" alt="${file.name}" class="max-h-[60vh] max-w-full rounded-xl object-contain shadow-md border border-slate-200 dark:border-slate-700 select-none">
                     </div>
                 `;
             } else if (type.startsWith('video/')) {
@@ -1608,7 +1707,7 @@
                             <i class="fa-solid fa-file"></i>
                         </div>
                         <p class="font-bold text-slate-800 dark:text-slate-100 text-sm">${file.name}</p>
-                        <p class="text-xs text-slate-400">화면에서 바로 볼 수 없는 형식입니다.<br>아래 [다운로드 받기] 버튼을 눌러 저장하세요.</p>
+                        <p class="text-xs text-slate-400">화면에서 바로 볼 수 없는 형식입니다.<br>아래 [사진(앨범) / 파일로 저장] 버튼을 눌러 저장하세요.</p>
                     </div>
                 `;
             }
@@ -1625,17 +1724,11 @@
                 bodyEl.innerHTML = '';
             }
             modal.classList.add('hidden');
+            currentPreviewFile = null;
         }
 
-        function downloadFileDirect(fileName, fileData) {
-            if (!fileData) return;
-            const a = document.createElement('a');
-            a.href = fileData;
-            a.download = fileName || 'download';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            showToast(`${fileName} 다운로드를 시작합니다.`);
+        function downloadFileDirect(fileName, fileData, fileType) {
+            downloadOrSaveFile(fileName, fileData, fileType);
         }
 
         function previewRevFile(chapId, sIdx, fIdx) {
@@ -1647,7 +1740,7 @@
         function downloadRevFile(chapId, sIdx, fIdx) {
             const key = `${chapId}_${sIdx}`;
             const file = appData.revelationProgress?.[key]?.files?.[fIdx];
-            if (file) downloadFileDirect(file.name, file.data);
+            if (file) downloadFileDirect(file.name, file.data, file.type);
         }
 
         function previewEvangelismFile(stageId, fIdx) {
@@ -1657,7 +1750,7 @@
 
         function downloadEvangelismFile(stageId, fIdx) {
             const file = appData.evangelismProgress?.[stageId]?.files?.[fIdx];
-            if (file) downloadFileDirect(file.name, file.data);
+            if (file) downloadFileDirect(file.name, file.data, file.type);
         }
 
         function openRevModal(chapId) {
