@@ -451,9 +451,22 @@
         let currentYear = new Date().getFullYear();
         let currentMonth = new Date().getMonth(); // 0-indexed
         let isStatsOpen = false; // 통계 섹션 접기 상태 (기본 접힘)
+        let currentRevFilter = 'all'; // 계시록 빠른 필터: 'all', '1-7', '8-14', '15-22', 'incomplete'
+        let currentRevChapterId = 1;
+        let currentEvangelismStageId = 'online'; // 전도 마스터 선택 단계
 
         function toggleStatsSection() {
             isStatsOpen = !isStatsOpen;
+            renderContent();
+        }
+
+        function setRevFilter(filter) {
+            currentRevFilter = filter;
+            renderContent();
+        }
+
+        function setEvangelismStage(stageId) {
+            currentEvangelismStageId = stageId;
             renderContent();
         }
 
@@ -1581,7 +1594,49 @@
         }
 
         function getRevelationMasterHTML() {
-            let chaptersHTML = revelationChapters.map(chap => {
+            // 전체 통계 계산
+            let totalChapters = revelationChapters.length;
+            let completedChaptersCount = 0;
+            let totalRevSubTopics = 0;
+            let completedRevSubTopics = 0;
+
+            revelationChapters.forEach(chap => {
+                let chapTotal = chap.subs.length;
+                let chapDone = 0;
+                totalRevSubTopics += chapTotal;
+                chap.subs.forEach((sub, sIdx) => {
+                    const key = `${chap.id}_${sIdx}`;
+                    const prog = appData.revelationProgress[key];
+                    if (prog && prog.script && prog.speech) {
+                        completedRevSubTopics++;
+                        chapDone++;
+                    }
+                });
+                if (chapDone === chapTotal) {
+                    completedChaptersCount++;
+                }
+            });
+
+            const overallPercent = Math.round((completedRevSubTopics / totalRevSubTopics) * 100);
+
+            // 필터링 적용
+            let filteredChapters = revelationChapters.filter(chap => {
+                if (currentRevFilter === '1-7') return chap.id >= 1 && chap.id <= 7;
+                if (currentRevFilter === '8-14') return chap.id >= 8 && chap.id <= 14;
+                if (currentRevFilter === '15-22') return chap.id >= 15 && chap.id <= 22;
+                if (currentRevFilter === 'incomplete') {
+                    let chapDone = 0;
+                    chap.subs.forEach((sub, sIdx) => {
+                        const key = `${chap.id}_${sIdx}`;
+                        const prog = appData.revelationProgress[key];
+                        if (prog && prog.script && prog.speech) chapDone++;
+                    });
+                    return chapDone < chap.subs.length;
+                }
+                return true; // 'all'
+            });
+
+            let chaptersHTML = filteredChapters.map(chap => {
                 let totalSubs = chap.subs.length;
                 let completedSubs = 0;
                 chap.subs.forEach((sub, sIdx) => {
@@ -1592,48 +1647,84 @@
                     }
                 });
                 const percent = Math.round((completedSubs / totalSubs) * 100);
+                const isChapFinished = (completedSubs === totalSubs);
 
                 return `
-                    <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-orange-400 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div class="flex items-start space-x-3 flex-1 min-w-0 w-full sm:w-auto">
-                            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-100 dark:bg-slate-700 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
-                                ${chap.id}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">제${chap.id}장: ${chap.title}</h4>
-                                <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">소주제 ${totalSubs}개 교안/스피치 빌더</p>
-                                <div class="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-2 max-w-md">
-                                    <div class="bg-orange-500 h-full rounded-full transition-all duration-300" style="width: ${percent}%"></div>
+                    <div onclick="openRevModal(${chap.id})" class="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-xl sm:rounded-2xl border ${isChapFinished ? 'border-orange-300 dark:border-orange-500/40 bg-orange-50/20 shadow-xs' : 'border-slate-200/80 dark:border-slate-700/80'} hover:border-orange-400 dark:hover:border-orange-500/60 transition cursor-pointer select-none">
+                        <div class="flex items-center justify-between gap-2.5">
+                            <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1">
+                                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${isChapFinished ? 'bg-orange-500 text-white' : 'bg-orange-100 dark:bg-slate-700 text-orange-600 dark:text-orange-400'} flex items-center justify-center font-extrabold text-xs sm:text-sm shrink-0 shadow-xs">
+                                    ${isChapFinished ? '<i class="fa-solid fa-crown text-sm"></i>' : chap.id + '장'}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">제${chap.id}장: ${chap.title}</h4>
+                                        ${isChapFinished ? '<span class="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-bold shrink-0">마스터 완료</span>' : ''}
+                                    </div>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <div class="flex-1 bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden max-w-xs">
+                                            <div class="bg-orange-500 h-full rounded-full transition-all duration-300" style="width: ${percent}%"></div>
+                                        </div>
+                                        <span class="text-[10px] sm:text-[11px] font-semibold ${isChapFinished ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400'}">${completedSubs}/${totalSubs} 완료 (${percent}%)</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700/50">
-                            <span class="text-xs font-bold text-orange-600 dark:text-orange-400 sm:hidden">완성도 ${percent}%</span>
-                            <button onclick="openRevModal(${chap.id})" class="flex-1 sm:flex-initial px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-xl text-xs sm:text-sm transition shadow-md shadow-orange-500/20 flex items-center justify-center space-x-1.5">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                                <span>교안/파일 작성</span>
-                            </button>
+                            <div class="flex items-center space-x-1.5 shrink-0">
+                                <span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-orange-600 hover:text-white transition flex items-center gap-1">
+                                    <span>작성</span>
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
 
             return `
-                <div class="max-w-5xl mx-auto space-y-3.5 sm:space-y-5 pb-10">
-                    <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5">
-                        <div>
-                            <span class="text-[10px] sm:text-[11px] font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider">REVELATION MASTER</span>
-                            <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">계시록 증거</h2>
-                            <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">각 장별 소주제 교안, 스크립트, 스피치와 멀티미디어 파일을 첨부하세요.</p>
+                <div class="max-w-5xl mx-auto space-y-3 sm:space-y-4 pb-10">
+                    <!-- 컴팩트 요약 대시보드 -->
+                    <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-2.5">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <div>
+                                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-book-bible text-orange-500"></i>
+                                    <span>계시록 1~22장 증거 마스터</span>
+                                </h2>
+                                <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">각 장을 탭하여 소주제별 교안, 스크립트, 스피치를 간편하게 체크하고 메모하세요.</p>
+                            </div>
+                            <div class="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
+                                <div class="px-2.5 py-1 rounded-xl bg-orange-100/80 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 text-xs font-bold">
+                                    ${completedChaptersCount} / 22장 마스터
+                                </div>
+                                <div class="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-300 text-xs font-bold">
+                                    달성도 ${overallPercent}%
+                                </div>
+                            </div>
                         </div>
-                        <div class="bg-orange-50 dark:bg-slate-700/50 px-3 py-1 rounded-xl text-center self-stretch sm:self-auto flex sm:flex-col justify-between items-center">
-                            <span class="text-[10px] text-slate-400">전체 장수</span>
-                            <span class="text-xs font-bold text-orange-600 dark:text-orange-400">22개 장 플랜</span>
+
+                        <!-- 빠른 구간 필터 탭 바 (길게 스크롤하지 않고 원하는 장 바로 찾기) -->
+                        <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pt-1 select-none">
+                            <button onclick="setRevFilter('all')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 ${currentRevFilter === 'all' ? 'bg-orange-500 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                                전체 (22)
+                            </button>
+                            <button onclick="setRevFilter('1-7')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 ${currentRevFilter === '1-7' ? 'bg-orange-500 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                                1~7장
+                            </button>
+                            <button onclick="setRevFilter('8-14')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 ${currentRevFilter === '8-14' ? 'bg-orange-500 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                                8~14장
+                            </button>
+                            <button onclick="setRevFilter('15-22')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 ${currentRevFilter === '15-22' ? 'bg-orange-500 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                                15~22장
+                            </button>
+                            <button onclick="setRevFilter('incomplete')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 ${currentRevFilter === 'incomplete' ? 'bg-orange-500 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                                미완료 장만 보기
+                            </button>
                         </div>
                     </div>
 
-                    <div class="space-y-2.5 sm:space-y-3">
-                        ${chaptersHTML}
+                    <!-- 장 목록 그리드 -->
+                    <div class="space-y-2 sm:space-y-2.5">
+                        ${chaptersHTML || '<div class="text-center py-8 text-xs text-slate-400">해당 조건의 장이 없습니다.</div>'}
                     </div>
                 </div>
             `;
@@ -1879,44 +1970,82 @@
             if (file) downloadFileDirect(file.name, file.data, file.type);
         }
 
+        function quickToggleSubProp(chapId, sIdx, prop) {
+            const key = `${chapId}_${sIdx}`;
+            if (!appData.revelationProgress[key]) {
+                appData.revelationProgress[key] = { lesson: false, script: false, speech: false, text: '', files: [] };
+            }
+            const currentVal = !!appData.revelationProgress[key][prop];
+            appData.revelationProgress[key][prop] = !currentVal;
+            saveData();
+            openRevModal(chapId);
+            const propLabels = { lesson: '교안', script: '스크립트', speech: '스피치' };
+            showToast(`${propLabels[prop]} ${!currentVal ? '완료 체크!' : '체크 해제'}`);
+        }
+
+        function toggleSubDetail(chapId, sIdx) {
+            const el = document.getElementById(`sub-detail-${chapId}-${sIdx}`);
+            const btn = document.getElementById(`sub-detail-btn-${chapId}-${sIdx}`);
+            if (el) {
+                const isHidden = el.classList.contains('hidden');
+                if (isHidden) {
+                    el.classList.remove('hidden');
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-up text-[10px]"></i> 메모/파일 접기';
+                } else {
+                    el.classList.add('hidden');
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-down text-[10px]"></i> 메모/파일 열기';
+                }
+            }
+        }
+
         function openRevModal(chapId) {
             currentRevChapterId = chapId;
             const chap = revelationChapters.find(c => c.id === chapId);
             document.getElementById('rev-modal-chap-badge').innerText = `제${chap.id}장`;
             document.getElementById('rev-modal-title').innerText = `${chap.title}`;
 
+            let completedCount = 0;
+            chap.subs.forEach((sub, sIdx) => {
+                const key = `${chapId}_${sIdx}`;
+                const data = appData.revelationProgress[key];
+                if (data && data.lesson && data.script && data.speech) completedCount++;
+            });
+
             let subHtml = chap.subs.map((sub, sIdx) => {
                 const key = `${chapId}_${sIdx}`;
                 const data = appData.revelationProgress[key] || { lesson: false, script: false, speech: false, text: '', files: [] };
+                const isAllComplete = data.lesson && data.script && data.speech;
+                const fileCount = (data.files || []).length;
+                const hasMemoOrFiles = (data.text && data.text.trim().length > 0) || fileCount > 0;
 
                 let filesHtml = (data.files || []).map((file, fIdx) => {
                     const meta = getFileMeta(file.name, file.type);
                     const isImg = meta.kind === 'image';
 
                     const thumbHtml = isImg && file.data ? 
-                        `<img src="${file.data}" alt="${file.name}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs">` :
-                        `<div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700/80 flex items-center justify-center shrink-0 text-base"><i class="fa-solid ${meta.icon}"></i></div>`;
+                        `<img src="${file.data}" alt="${file.name}" class="w-9 h-9 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs">` :
+                        `<div class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700/80 flex items-center justify-center shrink-0 text-sm"><i class="fa-solid ${meta.icon}"></i></div>`;
 
                     return `
-                        <div class="group flex items-center justify-between bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs hover:border-orange-400 dark:hover:border-orange-500/50 transition">
-                            <div onclick="previewRevFile(${chapId}, ${sIdx}, ${fIdx})" class="flex items-center space-x-2.5 min-w-0 flex-1 cursor-pointer select-none">
+                        <div class="group flex items-center justify-between bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs hover:border-orange-400 transition">
+                            <div onclick="previewRevFile(${chapId}, ${sIdx}, ${fIdx})" class="flex items-center space-x-2 min-w-0 flex-1 cursor-pointer select-none">
                                 ${thumbHtml}
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition">${file.name}</p>
-                                    <p class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                                        <span class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold ${meta.badgeBg}">${meta.label}</span>
-                                        <span class="text-orange-500 font-medium"><i class="fa-solid fa-eye text-[9px]"></i> 열기/저장</span>
+                                    <p class="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-orange-600 transition">${file.name}</p>
+                                    <p class="text-[9px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                        <span class="inline-block px-1 py-0.2 rounded font-bold ${meta.badgeBg}">${meta.label}</span>
+                                        <span class="text-orange-500 font-medium"><i class="fa-solid fa-eye text-[8px]"></i> 보기/저장</span>
                                     </p>
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-1 shrink-0 ml-2">
-                                <button type="button" onclick="previewRevFile(${chapId}, ${sIdx}, ${fIdx})" title="미리보기" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 flex items-center justify-center text-xs transition">
+                            <div class="flex items-center space-x-1 shrink-0 ml-1.5">
+                                <button type="button" onclick="previewRevFile(${chapId}, ${sIdx}, ${fIdx})" title="미리보기" class="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-orange-100 text-slate-600 dark:text-slate-300 hover:text-orange-600 flex items-center justify-center text-[10px] transition">
                                     <i class="fa-solid fa-magnifying-glass-plus"></i>
                                 </button>
-                                <button type="button" onclick="downloadRevFile(${chapId}, ${sIdx}, ${fIdx})" title="다운로드" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center text-xs transition">
+                                <button type="button" onclick="downloadRevFile(${chapId}, ${sIdx}, ${fIdx})" title="다운로드" class="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-emerald-100 text-slate-600 dark:text-slate-300 hover:text-emerald-600 flex items-center justify-center text-[10px] transition">
                                     <i class="fa-solid fa-download"></i>
                                 </button>
-                                <button type="button" onclick="removeRevFile(${chapId}, ${sIdx}, ${fIdx})" title="삭제" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-red-100 dark:hover:bg-red-900/40 text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center text-xs transition">
+                                <button type="button" onclick="removeRevFile(${chapId}, ${sIdx}, ${fIdx})" title="삭제" class="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-red-100 text-slate-400 hover:text-red-600 flex items-center justify-center text-[10px] transition">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
@@ -1925,39 +2054,55 @@
                 }).join('');
 
                 return `
-                    <div class="bg-slate-50 dark:bg-slate-900/50 p-3.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-                            <h4 class="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm leading-snug"><span class="text-orange-500 mr-1.5 font-bold">${sIdx + 1}.</span>${sub}</h4>
-                            <div class="flex items-center gap-1.5 text-[11px] font-semibold w-full sm:w-auto">
-                                <label class="flex-1 sm:flex-initial flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1 rounded-lg border transition ${data.lesson ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}">
-                                    <input type="checkbox" ${data.lesson ? 'checked' : ''} onchange="updateSubProp(${chapId}, ${sIdx}, 'lesson', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
-                                    <span>교안</span>
-                                </label>
-                                <label class="flex-1 sm:flex-initial flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1 rounded-lg border transition ${data.script ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}">
-                                    <input type="checkbox" ${data.script ? 'checked' : ''} onchange="updateSubProp(${chapId}, ${sIdx}, 'script', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
-                                    <span>스크립트</span>
-                                </label>
-                                <label class="flex-1 sm:flex-initial flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1 rounded-lg border transition ${data.speech ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}">
-                                    <input type="checkbox" ${data.speech ? 'checked' : ''} onchange="updateSubProp(${chapId}, ${sIdx}, 'speech', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
-                                    <span>스피치</span>
-                                </label>
+                    <div class="bg-slate-50/80 dark:bg-slate-900/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border ${isAllComplete ? 'border-orange-300 dark:border-orange-600/40 bg-orange-50/15' : 'border-slate-200 dark:border-slate-700/80'} space-y-2.5 transition">
+                        <!-- 소주제 헤더 및 완성 뱃지 -->
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm leading-snug flex items-center gap-1.5 min-w-0">
+                                <span class="w-5 h-5 rounded-full ${isAllComplete ? 'bg-emerald-500 text-white' : 'bg-orange-100 dark:bg-slate-700 text-orange-600 dark:text-orange-400'} flex items-center justify-center text-[10px] font-bold shrink-0">
+                                    ${isAllComplete ? '<i class="fa-solid fa-check"></i>' : sIdx + 1}
+                                </span>
+                                <span class="truncate">${sub}</span>
+                            </h4>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                ${isAllComplete ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-extrabold">완성</span>' : ''}
+                                <button type="button" id="sub-detail-btn-${chapId}-${sIdx}" onclick="toggleSubDetail(${chapId}, ${sIdx})" class="px-2 py-1 rounded-lg text-[10px] font-semibold text-slate-500 dark:text-slate-400 hover:text-orange-600 hover:bg-white dark:hover:bg-slate-800 transition border border-transparent hover:border-slate-200">
+                                    <i class="fa-solid fa-chevron-${hasMemoOrFiles ? 'up' : 'down'} text-[9px]"></i>
+                                    <span>${hasMemoOrFiles ? '메모/파일 접기' : '메모/파일 열기' + (fileCount > 0 ? ` (${fileCount})` : '')}</span>
+                                </button>
                             </div>
                         </div>
 
-                        <textarea oninput="updateSubText(${chapId}, ${sIdx}, this.value)" rows="2.5" placeholder="이 소주제에 대한 핵심 교안 및 스피치 메모를 작성하세요..." class="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500">${data.text || ''}</textarea>
+                        <!-- 3대 원터치 마스터 체크 버튼 (모바일 터치 최적화) -->
+                        <div class="grid grid-cols-3 gap-1.5 select-none">
+                            <button type="button" onclick="quickToggleSubProp(${chapId}, ${sIdx}, 'lesson')" class="py-1.5 px-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1 active:scale-95 ${data.lesson ? 'bg-orange-500 border-orange-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-orange-300'}">
+                                <i class="fa-solid ${data.lesson ? 'fa-circle-check text-white' : 'fa-book-open text-slate-400'} text-[11px]"></i>
+                                <span>교안</span>
+                            </button>
+                            <button type="button" onclick="quickToggleSubProp(${chapId}, ${sIdx}, 'script')" class="py-1.5 px-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1 active:scale-95 ${data.script ? 'bg-indigo-600 border-indigo-700 text-white shadow-xs' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300'}">
+                                <i class="fa-solid ${data.script ? 'fa-circle-check text-white' : 'fa-scroll text-slate-400'} text-[11px]"></i>
+                                <span>스크립트</span>
+                            </button>
+                            <button type="button" onclick="quickToggleSubProp(${chapId}, ${sIdx}, 'speech')" class="py-1.5 px-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1 active:scale-95 ${data.speech ? 'bg-emerald-600 border-emerald-700 text-white shadow-xs' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-emerald-300'}">
+                                <i class="fa-solid ${data.speech ? 'fa-circle-check text-white' : 'fa-microphone text-slate-400'} text-[11px]"></i>
+                                <span>스피치</span>
+                            </button>
+                        </div>
 
-                        <div class="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                            <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                    <i class="fa-solid fa-paperclip text-orange-500"></i> 첨부 파일 (사진/문서/미디어)
-                                </span>
-                                <label class="px-2.5 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 rounded-lg text-[11px] font-semibold cursor-pointer hover:bg-orange-200 transition flex items-center gap-1">
-                                    <i class="fa-solid fa-plus"></i> 추가
-                                    <input type="file" accept="*/*" onchange="handleRevFileUpload(event, ${chapId}, ${sIdx})" class="hidden">
-                                </label>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                ${filesHtml}
+                        <!-- 메모 & 첨부 파일 (접이식 아코디언) -->
+                        <div id="sub-detail-${chapId}-${sIdx}" class="${hasMemoOrFiles ? '' : 'hidden'} space-y-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                            <textarea oninput="updateSubText(${chapId}, ${sIdx}, this.value)" rows="2" placeholder="이 소주제의 핵심 요약 및 스피치 멘트를 적어두세요..." class="w-full p-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500">${data.text || ''}</textarea>
+
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                        <i class="fa-solid fa-paperclip text-orange-500"></i> 첨부 자료 (${fileCount}개)
+                                    </span>
+                                    <label class="px-2 py-0.5 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-300 rounded-lg text-[10px] font-bold cursor-pointer hover:bg-orange-200 transition flex items-center gap-1">
+                                        <i class="fa-solid fa-plus"></i> 파일 추가
+                                        <input type="file" accept="*/*" onchange="handleRevFileUpload(event, ${chapId}, ${sIdx})" class="hidden">
+                                    </label>
+                                </div>
+                                ${fileCount > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">${filesHtml}</div>` : ''}
                             </div>
                         </div>
                     </div>
@@ -2032,110 +2177,196 @@
             }
         }
 
+        function quickToggleEvangelismProp(stageId, prop) {
+            if (!appData.evangelismProgress) appData.evangelismProgress = {};
+            if (!appData.evangelismProgress[stageId]) {
+                appData.evangelismProgress[stageId] = { lesson: false, script: false, speech: false, memo: '', files: [] };
+            }
+            const currentVal = !!appData.evangelismProgress[stageId][prop];
+            appData.evangelismProgress[stageId][prop] = !currentVal;
+            saveData();
+            renderContent();
+            const propLabels = { lesson: '교안', script: '스크립트', speech: '스피치' };
+            showToast(`${propLabels[prop]} ${!currentVal ? '완료 체크!' : '체크 해제'}`);
+        }
+
         function getEvangelismMasterHTML() {
-            let stagesHTML = evangelismStages.map((stage, idx) => {
-                const stageData = appData.evangelismProgress?.[stage.id] || { lesson: false, script: false, speech: false, memo: '', files: [] };
-                const isFinished = stageData.lesson && stageData.script && stageData.speech;
+            // 전체 5단계 완료 개수 계산
+            let completedStagesCount = 0;
+            evangelismStages.forEach(s => {
+                const data = appData.evangelismProgress?.[s.id];
+                if (data && data.lesson && data.script && data.speech) completedStagesCount++;
+            });
 
-                let filesHtml = (stageData.files || []).map((file, fIdx) => {
-                    const meta = getFileMeta(file.name, file.type);
-                    const isImg = meta.kind === 'image';
+            // 현재 선택된 단계 데이터 가져오기
+            const currentStageIdx = evangelismStages.findIndex(s => s.id === currentEvangelismStageId);
+            const stage = evangelismStages[currentStageIdx !== -1 ? currentStageIdx : 0];
+            const stageData = appData.evangelismProgress?.[stage.id] || { lesson: false, script: false, speech: false, memo: '', files: [] };
+            const isFinished = stageData.lesson && stageData.script && stageData.speech;
+            const fileCount = (stageData.files || []).length;
 
-                    const thumbHtml = isImg && file.data ? 
-                        `<img src="${file.data}" alt="${file.name}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs">` :
-                        `<div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700/80 flex items-center justify-center shrink-0 text-base"><i class="fa-solid ${meta.icon}"></i></div>`;
-
-                    return `
-                        <div class="group flex items-center justify-between bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs hover:border-orange-400 dark:hover:border-orange-500/50 transition">
-                            <div onclick="previewEvangelismFile('${stage.id}', ${fIdx})" class="flex items-center space-x-2.5 min-w-0 flex-1 cursor-pointer select-none">
-                                ${thumbHtml}
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition">${file.name}</p>
-                                    <p class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                                        <span class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold ${meta.badgeBg}">${meta.label}</span>
-                                        <span class="text-orange-500 font-medium"><i class="fa-solid fa-eye text-[9px]"></i> 열기/저장</span>
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-1 shrink-0 ml-2">
-                                <button type="button" onclick="previewEvangelismFile('${stage.id}', ${fIdx})" title="미리보기" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 flex items-center justify-center text-xs transition">
-                                    <i class="fa-solid fa-magnifying-glass-plus"></i>
-                                </button>
-                                <button type="button" onclick="downloadEvangelismFile('${stage.id}', ${fIdx})" title="다운로드" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center text-xs transition">
-                                    <i class="fa-solid fa-download"></i>
-                                </button>
-                                <button type="button" onclick="removeEvangelismFile('${stage.id}', ${fIdx})" title="삭제" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-red-100 dark:hover:bg-red-900/40 text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center text-xs transition">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+            // 상단 5단계 네비게이션 탭 바 생성
+            const stageTabsHTML = evangelismStages.map((s, idx) => {
+                const sData = appData.evangelismProgress?.[s.id];
+                const sDone = sData && sData.lesson && sData.script && sData.speech;
+                const isActive = (s.id === stage.id);
 
                 return `
-                    <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-xl sm:rounded-2xl border ${isFinished ? 'border-emerald-500/50 bg-emerald-50/10' : 'border-slate-200 dark:border-slate-700'} shadow-sm space-y-3">
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5">
-                            <div class="flex items-center space-x-3 w-full sm:w-auto">
-                                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-100 dark:bg-slate-700 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
-                                    0${idx + 1}
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center space-x-2">
-                                        <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">${stage.name} 단계</h4>
-                                        ${isFinished ? '<span class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0">완료</span>' : ''}
-                                    </div>
-                                    <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">${stage.desc}</p>
-                                </div>
-                            </div>
+                    <button onclick="setEvangelismStage('${s.id}')" class="flex-1 min-w-[70px] sm:min-w-0 py-2 px-1.5 rounded-xl border transition-all text-center flex flex-col items-center justify-center select-none active:scale-95 ${isActive ? 'bg-orange-500 border-orange-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-orange-300'}">
+                        <div class="flex items-center gap-1 text-[10px] sm:text-xs font-bold leading-tight">
+                            <span>0${idx + 1}</span>
+                            ${sDone ? '<i class="fa-solid fa-circle-check text-[10px] ' + (isActive ? 'text-white' : 'text-emerald-500') + '"></i>' : ''}
+                        </div>
+                        <span class="text-xs sm:text-sm font-extrabold truncate w-full mt-0.5">${s.name}</span>
+                    </button>
+                `;
+            }).join('');
 
-                            <div class="grid grid-cols-3 gap-1.5 w-full sm:w-auto text-[11px] font-semibold">
-                                <label class="flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1.5 rounded-lg border transition ${stageData.lesson ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500'}">
-                                    <input type="checkbox" ${stageData.lesson ? 'checked' : ''} onchange="updateEvangelismStage('${stage.id}', 'lesson', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
-                                    <span>교안</span>
-                                </label>
-                                <label class="flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1.5 rounded-lg border transition ${stageData.script ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500'}">
-                                    <input type="checkbox" ${stageData.script ? 'checked' : ''} onchange="updateEvangelismStage('${stage.id}', 'script', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
-                                    <span>스크립트</span>
-                                </label>
-                                <label class="flex items-center justify-center space-x-1 cursor-pointer px-2.5 py-1.5 rounded-lg border transition ${stageData.speech ? 'bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500'}">
-                                    <input type="checkbox" ${stageData.speech ? 'checked' : ''} onchange="updateEvangelismStage('${stage.id}', 'speech', this.checked)" class="w-3.5 h-3.5 text-orange-600 rounded">
-                                    <span>스피치</span>
-                                </label>
+            // 첨부 파일 목록
+            let filesHtml = (stageData.files || []).map((file, fIdx) => {
+                const meta = getFileMeta(file.name, file.type);
+                const isImg = meta.kind === 'image';
+
+                const thumbHtml = isImg && file.data ? 
+                    `<img src="${file.data}" alt="${file.name}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs">` :
+                    `<div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700/80 flex items-center justify-center shrink-0 text-base"><i class="fa-solid ${meta.icon}"></i></div>`;
+
+                return `
+                    <div class="group flex items-center justify-between bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs hover:border-orange-400 transition">
+                        <div onclick="previewEvangelismFile('${stage.id}', ${fIdx})" class="flex items-center space-x-2.5 min-w-0 flex-1 cursor-pointer select-none">
+                            ${thumbHtml}
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-orange-600 transition">${file.name}</p>
+                                <p class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                    <span class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold ${meta.badgeBg}">${meta.label}</span>
+                                    <span class="text-orange-500 font-medium"><i class="fa-solid fa-eye text-[9px]"></i> 열기/저장</span>
+                                </p>
                             </div>
                         </div>
-
-                        <div>
-                            <textarea oninput="updateEvangelismMemo('${stage.id}', this.value)" rows="2.5" placeholder="${stage.name} 단계 핵심 상담 스크립트 및 시나리오를 작성하세요..." class="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500">${stageData.memo || ''}</textarea>
-                        </div>
-
-                        <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
-                            <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                    <i class="fa-solid fa-paperclip text-orange-500"></i> 첨부 파일 (사진/문서/미디어)
-                                </span>
-                                <label class="px-2.5 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 rounded-lg text-[11px] font-semibold cursor-pointer hover:bg-orange-200 transition flex items-center gap-1">
-                                    <i class="fa-solid fa-plus"></i> 추가
-                                    <input type="file" accept="*/*" onchange="handleEvangelismFileUpload(event, '${stage.id}')" class="hidden">
-                                </label>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                ${filesHtml}
-                            </div>
+                        <div class="flex items-center space-x-1 shrink-0 ml-2">
+                            <button type="button" onclick="previewEvangelismFile('${stage.id}', ${fIdx})" title="미리보기" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-orange-100 text-slate-600 dark:text-slate-300 hover:text-orange-600 flex items-center justify-center text-xs transition">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                            </button>
+                            <button type="button" onclick="downloadEvangelismFile('${stage.id}', ${fIdx})" title="다운로드" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-emerald-100 text-slate-600 dark:text-slate-300 hover:text-emerald-600 flex items-center justify-center text-xs transition">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            <button type="button" onclick="removeEvangelismFile('${stage.id}', ${fIdx})" title="삭제" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/70 hover:bg-red-100 text-slate-400 hover:text-red-600 flex items-center justify-center text-xs transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
                         </div>
                     </div>
                 `;
             }).join('');
 
+            const prevStage = currentStageIdx > 0 ? evangelismStages[currentStageIdx - 1] : null;
+            const nextStage = currentStageIdx < evangelismStages.length - 1 ? evangelismStages[currentStageIdx + 1] : null;
+
             return `
-                <div class="max-w-5xl mx-auto space-y-5 pb-10">
-                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                        <span class="text-[11px] font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider">EVANGELISM MASTER</span>
-                        <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-0.5">전도 마스터</h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">온라인 찾기부터 노방, 상담, 따기, 복음방까지 5가지 단계별 교안, 스크립트와 멀티미디어 파일을 마스터하세요.</p>
+                <div class="max-w-5xl mx-auto space-y-3 sm:space-y-4 pb-10">
+                    <!-- 컴팩트 요약 대시보드 -->
+                    <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-2.5">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-fire text-orange-500"></i>
+                                    <span>전도 5단계 마스터 플랜</span>
+                                </h2>
+                                <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">상단 탭을 눌러 각 단계별 교안, 스크립트, 스피치를 집중 마스터하세요.</p>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-xl bg-orange-100/80 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 text-xs font-bold shrink-0">
+                                ${completedStagesCount} / 5개 단계 완료
+                            </span>
+                        </div>
+
+                        <!-- 5단계 스마트 탭 바 -->
+                        <div class="grid grid-cols-5 gap-1 sm:gap-2 pt-1">
+                            ${stageTabsHTML}
+                        </div>
                     </div>
 
-                    <div class="space-y-3">
-                        ${stagesHTML}
+                    <!-- 선택된 1개 단계 집중 카드 (단순 & 직관적인 UI) -->
+                    <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-6 rounded-2xl border ${isFinished ? 'border-orange-300 dark:border-orange-600/40' : 'border-slate-200 dark:border-slate-700'} shadow-sm space-y-4">
+                        <!-- 단계 헤더 -->
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-extrabold text-base shadow-sm shrink-0">
+                                    0${currentStageIdx + 1}
+                                </div>
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">${stage.name} 단계</h3>
+                                        ${isFinished ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-xs font-extrabold flex items-center gap-1"><i class="fa-solid fa-check"></i> 마스터 완료</span>' : ''}
+                                    </div>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${stage.desc}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 1. 3대 마스터 원터치 체크 버튼 -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                <span>3대 필수 마스터 체크 (터치하여 완료)</span>
+                            </label>
+                            <div class="grid grid-cols-3 gap-2 sm:gap-3 select-none">
+                                <button type="button" onclick="quickToggleEvangelismProp('${stage.id}', 'lesson')" class="p-2.5 sm:p-3 rounded-xl border transition-all text-center flex flex-col items-center justify-center gap-1 active:scale-95 ${stageData.lesson ? 'bg-orange-500 border-orange-600 text-white font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold hover:border-slate-300'}">
+                                    <i class="fa-solid ${stageData.lesson ? 'fa-circle-check text-white' : 'fa-book-open text-slate-400'} text-base"></i>
+                                    <span class="text-xs sm:text-sm">교안 준비</span>
+                                </button>
+                                <button type="button" onclick="quickToggleEvangelismProp('${stage.id}', 'script')" class="p-2.5 sm:p-3 rounded-xl border transition-all text-center flex flex-col items-center justify-center gap-1 active:scale-95 ${stageData.script ? 'bg-indigo-600 border-indigo-700 text-white font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold hover:border-slate-300'}">
+                                    <i class="fa-solid ${stageData.script ? 'fa-circle-check text-white' : 'fa-scroll text-slate-400'} text-base"></i>
+                                    <span class="text-xs sm:text-sm">스크립트</span>
+                                </button>
+                                <button type="button" onclick="quickToggleEvangelismProp('${stage.id}', 'speech')" class="p-2.5 sm:p-3 rounded-xl border transition-all text-center flex flex-col items-center justify-center gap-1 active:scale-95 ${stageData.speech ? 'bg-emerald-600 border-emerald-700 text-white font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold hover:border-slate-300'}">
+                                    <i class="fa-solid ${stageData.speech ? 'fa-circle-check text-white' : 'fa-microphone text-slate-400'} text-base"></i>
+                                    <span class="text-xs sm:text-sm">스피치 실전</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2. 핵심 상담 스크립트 및 시나리오 메모 -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                    <span>핵심 상담 스크립트 & 시나리오 메모</span>
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-normal">입력 시 자동 저장</span>
+                            </label>
+                            <textarea oninput="updateEvangelismMemo('${stage.id}', this.value)" rows="3" placeholder="${stage.name} 단계에서 나눌 핵심 대화 멘트, 질문 시나리오, 피드백을 기록하세요..." class="w-full p-3 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500">${stageData.memo || ''}</textarea>
+                        </div>
+
+                        <!-- 3. 첨부 자료 / 파일 (사진/문서) -->
+                        <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-paperclip text-orange-500"></i>
+                                    <span>첨부 자료 및 교안 파일 (${fileCount}개)</span>
+                                </span>
+                                <label class="px-3 py-1 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-300 rounded-xl text-xs font-bold cursor-pointer hover:bg-orange-200 transition flex items-center gap-1">
+                                    <i class="fa-solid fa-plus"></i>
+                                    <span>자료 추가</span>
+                                    <input type="file" accept="*/*" onchange="handleEvangelismFileUpload(event, '${stage.id}')" class="hidden">
+                                </label>
+                            </div>
+                            ${fileCount > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${filesHtml}</div>` : '<div class="text-center py-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-xs text-slate-400">첨부된 자료가 없습니다. [+ 자료 추가]를 눌러 교안 사진이나 문서를 보관하세요.</div>'}
+                        </div>
+
+                        <!-- 하단 이전 단계 / 다음 단계 쉬운 이동 네비게이션 -->
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700/60">
+                            ${prevStage ? `
+                                <button type="button" onclick="setEvangelismStage('${prevStage.id}')" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-300 hover:bg-orange-50 dark:hover:bg-slate-700 hover:text-orange-600 text-xs font-bold transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    <span>이전: ${prevStage.name}</span>
+                                </button>
+                            ` : '<div></div>'}
+                            ${nextStage ? `
+                                <button type="button" onclick="setEvangelismStage('${nextStage.id}')" class="px-3.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-orange-500/20">
+                                    <span>다음: ${nextStage.name}</span>
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            ` : '<div></div>'}
+                        </div>
                     </div>
                 </div>
             `;
