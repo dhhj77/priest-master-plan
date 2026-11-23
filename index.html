@@ -185,8 +185,8 @@
                 </div>
             </header>
 
-            <!-- Dynamic Content Container (충분한 상하단 안전 여백 확보) -->
-            <div id="content-container" class="flex-1 overflow-y-auto custom-scrollbar p-3.5 sm:p-6 md:p-8 pt-3.5 sm:pt-6 pb-36 sm:pb-40 md:pb-8">
+            <!-- Dynamic Content Container (스크롤 없이 한 화면에 최적화된 컴팩트 여백) -->
+            <div id="content-container" class="flex-1 overflow-y-auto custom-scrollbar p-2.5 sm:p-5 md:p-8 pt-2 sm:pt-4 pb-6 sm:pb-8 md:pb-8">
                 <!-- Content injected via JS -->
             </div>
 
@@ -1116,28 +1116,27 @@
         function getCloudSyncBannerInnerContent() {
             if (currentCloudState === 'connected') {
                 return `
-                    <div class="max-w-5xl mx-auto mb-4 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 rounded-xl px-3.5 py-2 flex items-center justify-between text-xs transition">
+                    <div class="max-w-5xl mx-auto mb-2 sm:mb-3 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 rounded-xl px-3 py-1.5 sm:px-3.5 sm:py-2 flex items-center justify-between text-xs transition">
                         <div class="flex items-center space-x-2 truncate mr-2">
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                            <span class="font-semibold text-emerald-800 dark:text-emerald-300 truncate">클라우드 실시간 동기화 작동 중</span>
-                            <span class="text-[11px] text-emerald-600 dark:text-emerald-400 hidden sm:inline">(스마트폰과 노트북이 자동 일치합니다 ${lastSyncTimeString ? '· ' + lastSyncTimeString : ''})</span>
+                            <span class="font-semibold text-emerald-800 dark:text-emerald-300 truncate text-[11px] sm:text-xs">클라우드 실시간 동기화 작동 중</span>
+                            <span class="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 hidden sm:inline">(스마트폰과 노트북이 자동 일치합니다 ${lastSyncTimeString ? '· ' + lastSyncTimeString : ''})</span>
                         </div>
-                        <button onclick="openFirebaseModal()" class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0">
+                        <button onclick="openFirebaseModal()" class="text-[10px] sm:text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0">
                             동기화 관리
                         </button>
                     </div>
                 `;
             } else if (currentCloudState === 'error') {
                 return `
-                    <div class="max-w-5xl mx-auto mb-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl px-3.5 py-2.5 flex items-center justify-between text-xs transition">
-                        <div class="flex items-center space-x-2.5 min-w-0 mr-2">
-                            <span class="w-6 h-6 rounded-lg bg-red-500 text-white flex items-center justify-center text-xs shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                    <div class="max-w-5xl mx-auto mb-2 sm:mb-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl px-3 py-2 flex items-center justify-between text-xs transition">
+                        <div class="flex items-center space-x-2 min-w-0 mr-2">
+                            <span class="w-5 h-5 rounded-lg bg-red-500 text-white flex items-center justify-center text-[10px] shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></span>
                             <div class="min-w-0">
-                                <p class="font-bold text-red-900 dark:text-red-200 text-xs truncate">클라우드 동기화 연결 오류</p>
-                                <p class="text-[11px] text-red-600 dark:text-red-400 truncate">Firebase 설정을 확인해주세요.</p>
+                                <p class="font-bold text-red-900 dark:text-red-200 text-[11px] sm:text-xs truncate">클라우드 동기화 연결 오류</p>
                             </div>
                         </div>
-                        <button onclick="openFirebaseModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg transition shrink-0">
+                        <button onclick="openFirebaseModal()" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] sm:text-xs rounded-lg transition shrink-0">
                             설정 확인
                         </button>
                     </div>
@@ -1145,28 +1144,23 @@
             } else {
                 // local 상태: 미연동 경고 배너
                 return `
-                    <div class="max-w-5xl mx-auto mb-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200/90 dark:border-amber-800/60 rounded-2xl p-3.5 sm:p-4 shadow-xs transition">
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <div class="flex items-start space-x-3 min-w-0">
-                                <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                    <div class="max-w-5xl mx-auto mb-2 sm:mb-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200/90 dark:border-amber-800/60 rounded-xl p-2.5 sm:p-3.5 shadow-xs transition">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+                            <div class="flex items-center space-x-2.5 min-w-0">
+                                <div class="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">
                                     <i class="fa-solid fa-mobile-screen-button"></i>
                                 </div>
                                 <div class="min-w-0">
                                     <h4 class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
                                         <span>스마트폰 ↔ 노트북 실시간 연동이 꺼져 있습니다</span>
-                                        <span class="bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-[10px] px-1.5 py-0.5 rounded-md font-bold">기기 단독 저장</span>
+                                        <span class="bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-[9px] px-1 py-0.5 rounded font-bold">기기 단독 저장</span>
                                     </h4>
-                                    <p class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                                        현재 체크한 내용은 <b>이 기기에만</b> 저장 중입니다. 스마트폰과 노트북에서 동시에 체크하고 보려면 Firebase 클라우드 연동을 켜주세요!
-                                    </p>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
-                                <button onclick="openFirebaseModal()" class="flex-1 sm:flex-initial px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition shadow-sm shadow-orange-500/20 flex items-center justify-center gap-1.5">
-                                    <i class="fa-solid fa-fire"></i>
-                                    <span>실시간 연동 켜기 (무료)</span>
-                                </button>
-                            </div>
+                            <button onclick="openFirebaseModal()" class="w-full sm:w-auto px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition shadow-sm flex items-center justify-center gap-1.5 shrink-0">
+                                <i class="fa-solid fa-fire text-xs"></i>
+                                <span>실시간 연동 켜기</span>
+                            </button>
                         </div>
                     </div>
                 `;
@@ -1270,7 +1264,7 @@
                 calendarGridHTML += `<div class="aspect-square bg-slate-50/40 dark:bg-slate-900/30 rounded-lg sm:rounded-xl opacity-30"></div>`;
             }
 
-            // 날짜 셀 생성 (세련된 미니멀 디자인)
+            // 날짜 셀 생성 (세련된 컴팩트 디자인 - 한 화면 최적화)
             const todayStr = new Date().toISOString().split('T')[0];
 
             for (let d = 1; d <= daysInMonth; d++) {
@@ -1301,33 +1295,33 @@
                 }
 
                 let selectClass = isSelected
-                    ? "ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-slate-900 shadow-md scale-[1.03] z-10"
+                    ? "ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-slate-900 shadow-md scale-[1.02] z-10"
                     : "hover:border-orange-300 dark:hover:border-slate-500";
 
                 calendarGridHTML += `
-                    <div onclick="selectDate('${dateKey}')" class="min-h-[62px] sm:min-h-[70px] border rounded-lg sm:rounded-xl flex flex-col justify-between p-1 sm:p-1.5 cursor-pointer transition select-none ${cellBgClass} ${selectClass}">
-                        <div class="flex items-center justify-between leading-none mb-1">
-                            <span class="text-[11px] sm:text-xs font-bold ${dayColorClass}">${d}</span>
-                            ${isComplete ? '<i class="fa-solid fa-crown text-[9px] text-amber-500 font-bold"></i>' : (isToday ? '<span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>' : '')}
+                    <div onclick="selectDate('${dateKey}')" class="min-h-[46px] sm:min-h-[58px] border rounded-lg sm:rounded-xl flex flex-col justify-between p-0.5 sm:p-1.5 cursor-pointer transition select-none ${cellBgClass} ${selectClass}">
+                        <div class="flex items-center justify-between leading-none px-0.5 pt-0.5">
+                            <span class="text-[10px] sm:text-xs font-bold ${dayColorClass}">${d}</span>
+                            ${isComplete ? '<i class="fa-solid fa-crown text-[8px] sm:text-[9.5px] text-amber-500 font-bold"></i>' : (isToday ? '<span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>' : '')}
                         </div>
                         <div class="grid grid-cols-2 gap-0.5 items-center w-full pb-0.5">
                             ${record.word ? `
-                                <span class="w-full text-center text-[7.5px] sm:text-[9px] font-bold leading-none py-0.5 px-0.5 rounded bg-orange-100 dark:bg-orange-950/70 text-orange-700 dark:text-orange-300 border border-orange-200/60 dark:border-orange-800/40 truncate">
+                                <span class="w-full text-center text-[7px] sm:text-[8.5px] font-bold leading-none py-[1.5px] px-0.5 rounded bg-orange-100 dark:bg-orange-950/70 text-orange-700 dark:text-orange-300 border border-orange-200/60 dark:border-orange-800/40 truncate">
                                     말씀
                                 </span>
                             ` : ''}
                             ${record.prayer ? `
-                                <span class="w-full text-center text-[7.5px] sm:text-[9px] font-bold leading-none py-0.5 px-0.5 rounded bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 truncate">
+                                <span class="w-full text-center text-[7px] sm:text-[8.5px] font-bold leading-none py-[1.5px] px-0.5 rounded bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 truncate">
                                     기도
                                 </span>
                             ` : ''}
                             ${record.exercise ? `
-                                <span class="w-full text-center text-[7.5px] sm:text-[9px] font-bold leading-none py-0.5 px-0.5 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 truncate">
+                                <span class="w-full text-center text-[7px] sm:text-[8.5px] font-bold leading-none py-[1.5px] px-0.5 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 truncate">
                                     운동
                                 </span>
                             ` : ''}
                             ${record.coffee ? `
-                                <span class="w-full text-center text-[7.5px] sm:text-[9px] font-bold leading-none py-0.5 px-0.5 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40 truncate">
+                                <span class="w-full text-center text-[7px] sm:text-[8.5px] font-bold leading-none py-[1.5px] px-0.5 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40 truncate">
                                     커피
                                 </span>
                             ` : ''}
@@ -1337,227 +1331,217 @@
             }
 
             const currentRecord = appData.dailyRecords[selectedDateStr] || { word: false, prayer: false, exercise: false, coffee: false };
+            const weekDayKor = ['일', '월', '화', '수', '목', '금', '토'][new Date(selectedDateStr + 'T00:00:00').getDay()] || '';
 
             return `
-                <div class="max-w-5xl mx-auto space-y-3.5 sm:space-y-5 pb-10">
-                    <!-- 통계 요약 카드 (기본 접힘/숨김, 탭하여 펼치기) -->
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs overflow-hidden transition-all">
-                        <button type="button" onclick="toggleStatsSection()" class="w-full px-4 py-3 flex items-center justify-between text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition select-none">
-                            <span class="flex items-center gap-2 truncate min-w-0 mr-2">
-                                <i class="fa-solid fa-chart-pie text-orange-500 shrink-0"></i>
-                                <span class="truncate">${currentYear}년 ${currentMonth + 1}월 4대 습관 & 계시록 통계</span>
-                                <span class="text-[10px] sm:text-[11px] font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/60 px-2 py-0.5 rounded-full shrink-0">달성률 ${combinedPercent}%</span>
-                            </span>
-                            <span class="flex items-center gap-1.5 text-xs text-slate-400 shrink-0">
-                                <span>${isStatsOpen ? '통계 접기' : '통계 보기'}</span>
-                                <i class="fa-solid fa-chevron-${isStatsOpen ? 'up' : 'down'} text-[11px]"></i>
-                            </span>
-                        </button>
+                <div class="max-w-5xl mx-auto space-y-2 sm:space-y-3.5 pb-4 sm:pb-6">
+                    <!-- 상단 컴팩트 습관 체크 바 (스크롤 없이 바로 클릭 & 확인) -->
+                    <div class="bg-white dark:bg-slate-800 p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-1.5 min-w-0">
+                                <span class="w-2 h-2 rounded-full bg-orange-500 shrink-0"></span>
+                                <h3 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                                    <span class="text-orange-600 dark:text-orange-400 font-extrabold">${selectedDateStr} (${weekDayKor})</span> 습관 체크
+                                </h3>
+                            </div>
+                            <button type="button" onclick="toggleStatsSection()" class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700/70 text-[10px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-orange-600 flex items-center gap-1 transition shrink-0 select-none">
+                                <i class="fa-solid fa-chart-pie text-orange-500"></i>
+                                <span>통계 ${isStatsOpen ? '접기 ▲' : '보기 ▼'}</span>
+                            </button>
+                        </div>
 
-                        ${isStatsOpen ? `
-                        <div class="p-3.5 sm:p-5 pt-0 border-t border-slate-100 dark:border-slate-700/60 mt-3 space-y-3 sm:space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-5">
-                                <div class="bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-3">
-                                    <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2.5">
-                                        <div class="min-w-0 pr-2">
-                                            <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base flex items-center truncate">
-                                                <i class="fa-solid fa-chart-line text-orange-500 mr-2 shrink-0"></i>
-                                                <span class="truncate">${currentYear}년 ${currentMonth + 1}월 습관 통계</span>
-                                            </h3>
-                                            <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">말씀 · 기도 · 운동 · 커피 종합 이행률</p>
-                                        </div>
-                                        <span class="px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 text-xs font-bold shrink-0">
-                                            달성률 ${combinedPercent}%
-                                        </span>
+                        <!-- 4가지 습관 토글 버튼 (가로 4등분 원터치 버튼) -->
+                        <div class="grid grid-cols-4 gap-1.5 sm:gap-2.5">
+                            <button type="button" onclick="toggleDailyHabit('word')" class="relative flex flex-col sm:flex-row items-center justify-center sm:justify-between p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all active:scale-[0.97] select-none ${currentRecord.word ? 'bg-orange-500/10 border-orange-500/80 text-orange-600 dark:text-orange-400 font-bold shadow-xs' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
+                                <div class="flex items-center gap-1 truncate">
+                                    <i class="fa-solid fa-book-open text-xs sm:text-sm ${currentRecord.word ? 'text-orange-500' : 'text-slate-400'}"></i>
+                                    <span class="text-[11px] sm:text-xs truncate">말씀</span>
+                                </div>
+                                <div class="w-4 h-4 sm:w-5 sm:h-5 rounded-md sm:rounded-lg flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 transition ${currentRecord.word ? 'bg-orange-500 text-white shadow-xs' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
+                                    <i class="fa-solid fa-check text-[9px] sm:text-[11px]"></i>
+                                </div>
+                            </button>
+
+                            <button type="button" onclick="toggleDailyHabit('prayer')" class="relative flex flex-col sm:flex-row items-center justify-center sm:justify-between p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all active:scale-[0.97] select-none ${currentRecord.prayer ? 'bg-indigo-500/10 border-indigo-500/80 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
+                                <div class="flex items-center gap-1 truncate">
+                                    <i class="fa-solid fa-hands-praying text-xs sm:text-sm ${currentRecord.prayer ? 'text-indigo-500' : 'text-slate-400'}"></i>
+                                    <span class="text-[11px] sm:text-xs truncate">기도</span>
+                                </div>
+                                <div class="w-4 h-4 sm:w-5 sm:h-5 rounded-md sm:rounded-lg flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 transition ${currentRecord.prayer ? 'bg-indigo-500 text-white shadow-xs' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
+                                    <i class="fa-solid fa-check text-[9px] sm:text-[11px]"></i>
+                                </div>
+                            </button>
+
+                            <button type="button" onclick="toggleDailyHabit('exercise')" class="relative flex flex-col sm:flex-row items-center justify-center sm:justify-between p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all active:scale-[0.97] select-none ${currentRecord.exercise ? 'bg-emerald-500/10 border-emerald-500/80 text-emerald-600 dark:text-emerald-400 font-bold shadow-xs' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
+                                <div class="flex items-center gap-1 truncate">
+                                    <i class="fa-solid fa-person-running text-xs sm:text-sm ${currentRecord.exercise ? 'text-emerald-500' : 'text-slate-400'}"></i>
+                                    <span class="text-[11px] sm:text-xs truncate">운동</span>
+                                </div>
+                                <div class="w-4 h-4 sm:w-5 sm:h-5 rounded-md sm:rounded-lg flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 transition ${currentRecord.exercise ? 'bg-emerald-500 text-white shadow-xs' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
+                                    <i class="fa-solid fa-check text-[9px] sm:text-[11px]"></i>
+                                </div>
+                            </button>
+
+                            <button type="button" onclick="toggleDailyHabit('coffee')" class="relative flex flex-col sm:flex-row items-center justify-center sm:justify-between p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all active:scale-[0.97] select-none ${currentRecord.coffee ? 'bg-amber-500/10 border-amber-500/80 text-amber-600 dark:text-amber-400 font-bold shadow-xs' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
+                                <div class="flex items-center gap-1 truncate">
+                                    <i class="fa-solid fa-mug-hot text-xs sm:text-sm ${currentRecord.coffee ? 'text-amber-500' : 'text-slate-400'}"></i>
+                                    <span class="text-[11px] sm:text-xs truncate" title="커피 (하루 1잔 이하)">커피</span>
+                                </div>
+                                <div class="w-4 h-4 sm:w-5 sm:h-5 rounded-md sm:rounded-lg flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 transition ${currentRecord.coffee ? 'bg-amber-500 text-white shadow-xs' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
+                                    <i class="fa-solid fa-check text-[9px] sm:text-[11px]"></i>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 통계 요약 카드 (접힘/펼침 아코디언) -->
+                    ${isStatsOpen ? `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs p-3.5 sm:p-5 transition-all space-y-3 sm:space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-5">
+                            <div class="bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-3">
+                                <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2.5">
+                                    <div class="min-w-0 pr-2">
+                                        <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base flex items-center truncate">
+                                            <i class="fa-solid fa-chart-line text-orange-500 mr-2 shrink-0"></i>
+                                            <span class="truncate">${currentYear}년 ${currentMonth + 1}월 습관 통계</span>
+                                        </h3>
+                                        <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">말씀 · 기도 · 운동 · 커피 종합 이행률</p>
                                     </div>
-
-                                    <div class="space-y-2.5">
-                                        <div class="space-y-1">
-                                            <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-500"></span>📖 말씀 달성</span>
-                                                <span class="text-orange-600 dark:text-orange-400 font-bold">${wordCount}일 / ${daysInMonth}일 (${wordPercent}%)</span>
-                                            </div>
-                                            <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
-                                                <div class="bg-orange-500 h-full rounded-full transition-all duration-500" style="width: ${wordPercent}%"></div>
-                                            </div>
-                                        </div>
-
-                                        <div class="space-y-1">
-                                            <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>🙏 기도 달성</span>
-                                                <span class="text-indigo-600 dark:text-indigo-400 font-bold">${prayerCount}일 / ${daysInMonth}일 (${prayerPercent}%)</span>
-                                            </div>
-                                            <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
-                                                <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${prayerPercent}%"></div>
-                                            </div>
-                                        </div>
-
-                                        <div class="space-y-1">
-                                            <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>🏃 운동 달성</span>
-                                                <span class="text-emerald-600 dark:text-emerald-400 font-bold">${exerciseCount}일 / ${daysInMonth}일 (${exercisePercent}%)</span>
-                                            </div>
-                                            <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
-                                                <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${exercisePercent}%"></div>
-                                            </div>
-                                        </div>
-
-                                        <div class="space-y-1">
-                                            <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>☕ 커피 절제 (1잔 이하)</span>
-                                                <span class="text-amber-600 dark:text-amber-400 font-bold">${coffeeCount}일 / ${daysInMonth}일 (${coffeePercent}%)</span>
-                                            </div>
-                                            <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
-                                                <div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: ${coffeePercent}%"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="pt-2 text-[11px] text-slate-400 flex justify-between border-t border-slate-200/60 dark:border-slate-700/40">
-                                        <span>완벽 달성: <b class="text-slate-700 dark:text-slate-200">${perfectDaysCount}일</b></span>
-                                        <span>총 이행: <b class="text-slate-700 dark:text-slate-200">${totalCheckedCount}회</b></span>
-                                    </div>
+                                    <span class="px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 text-xs font-bold shrink-0">
+                                        달성률 ${combinedPercent}%
+                                    </span>
                                 </div>
 
-                                <div class="bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-3">
-                                    <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2.5">
-                                        <div class="min-w-0 pr-2">
-                                            <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base flex items-center truncate">
-                                                <i class="fa-solid fa-book-bible text-orange-500 mr-2 shrink-0"></i>
-                                                <span class="truncate">계시록 1~22장 완료 현황</span>
-                                            </h3>
-                                            <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">전체 22개 장 마스터 진행률</p>
+                                <div class="space-y-2.5">
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-500"></span>📖 말씀 달성</span>
+                                            <span class="text-orange-600 dark:text-orange-400 font-bold">${wordCount}일 / ${daysInMonth}일 (${wordPercent}%)</span>
                                         </div>
-                                        <span class="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold shrink-0">
-                                            ${completedChaptersCount} / 22장 완료
-                                        </span>
+                                        <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-orange-500 h-full rounded-full transition-all duration-500" style="width: ${wordPercent}%"></div>
+                                        </div>
                                     </div>
 
-                                    <div class="space-y-2.5">
-                                        <div class="space-y-1">
-                                            <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                                <span>소주제 암송 및 스피치 완성도</span>
-                                                <span class="text-emerald-600 dark:text-emerald-400 font-bold">${completedRevSubTopics} / ${totalRevSubTopics} (${revPercent}%)</span>
-                                            </div>
-                                            <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
-                                                <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${revPercent}%"></div>
-                                            </div>
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>🙏 기도 달성</span>
+                                            <span class="text-indigo-600 dark:text-indigo-400 font-bold">${prayerCount}일 / ${daysInMonth}일 (${prayerPercent}%)</span>
+                                        </div>
+                                        <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${prayerPercent}%"></div>
                                         </div>
                                     </div>
-                                    <div class="pt-2 text-[11px] text-slate-400 flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/40">
-                                        <span>미완료 장수: <b class="text-slate-700 dark:text-slate-200">${22 - completedChaptersCount}개 장</b></span>
-                                        <span class="text-orange-600 dark:text-orange-400 font-semibold cursor-pointer hover:underline text-xs" onclick="switchTab('revelation')">계시록 작성 &rarr;</span>
+
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>🏃 운동 달성</span>
+                                            <span class="text-emerald-600 dark:text-emerald-400 font-bold">${exerciseCount}일 / ${daysInMonth}일 (${exercisePercent}%)</span>
+                                        </div>
+                                        <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${exercisePercent}%"></div>
+                                        </div>
                                     </div>
+
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>☕ 커피 절제 (1잔 이하)</span>
+                                            <span class="text-amber-600 dark:text-amber-400 font-bold">${coffeeCount}일 / ${daysInMonth}일 (${coffeePercent}%)</span>
+                                        </div>
+                                        <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: ${coffeePercent}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pt-2 text-[11px] text-slate-400 flex justify-between border-t border-slate-200/60 dark:border-slate-700/40">
+                                    <span>완벽 달성: <b class="text-slate-700 dark:text-slate-200">${perfectDaysCount}일</b></span>
+                                    <span>총 이행: <b class="text-slate-700 dark:text-slate-200">${totalCheckedCount}회</b></span>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-3">
+                                <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2.5">
+                                    <div class="min-w-0 pr-2">
+                                        <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base flex items-center truncate">
+                                            <i class="fa-solid fa-book-bible text-orange-500 mr-2 shrink-0"></i>
+                                            <span class="truncate">계시록 1~22장 완료 현황</span>
+                                        </h3>
+                                        <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">전체 22개 장 마스터 진행률</p>
+                                    </div>
+                                    <span class="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold shrink-0">
+                                        ${completedChaptersCount} / 22장 완료
+                                    </span>
+                                </div>
+
+                                <div class="space-y-2.5">
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                            <span>소주제 암송 및 스피치 완성도</span>
+                                            <span class="text-emerald-600 dark:text-emerald-400 font-bold">${completedRevSubTopics} / ${totalRevSubTopics} (${revPercent}%)</span>
+                                        </div>
+                                        <div class="w-full bg-slate-200/70 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${revPercent}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pt-2 text-[11px] text-slate-400 flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/40">
+                                    <span>미완료 장수: <b class="text-slate-700 dark:text-slate-200">${22 - completedChaptersCount}개 장</b></span>
+                                    <span class="text-orange-600 dark:text-orange-400 font-semibold cursor-pointer hover:underline text-xs" onclick="switchTab('revelation')">계시록 작성 &rarr;</span>
                                 </div>
                             </div>
                         </div>
-                        ` : ''}
                     </div>
+                    ` : ''}
 
-                    <!-- 캘린더 카드 -->
-                    <div class="bg-white dark:bg-slate-800 p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-3.5">
+                    <!-- 캘린더 카드 (상단 습관 체크와 한눈에 보이는 구조) -->
+                    <div class="bg-white dark:bg-slate-800 p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-2 sm:space-y-3">
                         <!-- 캘린더 상단 헤더 및 범례 -->
-                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2.5 border-b border-slate-100 dark:border-slate-700/60 pb-3">
-                            <div class="flex items-center space-x-2">
-                                <button onclick="changeMonth(-1)" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 transition">
-                                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-1.5 sm:gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2">
+                            <div class="flex items-center space-x-1.5">
+                                <button onclick="changeMonth(-1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 transition">
+                                    <i class="fa-solid fa-chevron-left text-[11px]"></i>
                                 </button>
-                                <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white px-1.5">${currentYear}년 ${currentMonth + 1}월</h3>
-                                <button onclick="changeMonth(1)" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 transition">
-                                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                                <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white px-1">${currentYear}년 ${currentMonth + 1}월</h3>
+                                <button onclick="changeMonth(1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 transition">
+                                    <i class="fa-solid fa-chevron-right text-[11px]"></i>
                                 </button>
                             </div>
 
                             <!-- 세련된 미니 범례 -->
                             <div class="flex items-center gap-1 sm:gap-1.5 text-xs font-medium flex-wrap justify-center">
-                                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-orange-100/80 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border border-orange-200/60 dark:border-orange-800/40">
-                                    <span class="text-[9.5px] sm:text-[11px] font-bold">말씀 ${wordCount}일</span>
+                                <div class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-orange-100/80 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border border-orange-200/60 dark:border-orange-800/40">
+                                    <span class="text-[9px] sm:text-[10px] font-bold">말씀 ${wordCount}일</span>
                                 </div>
-                                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-indigo-100/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
-                                    <span class="text-[9.5px] sm:text-[11px] font-bold">기도 ${prayerCount}일</span>
+                                <div class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-100/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+                                    <span class="text-[9px] sm:text-[10px] font-bold">기도 ${prayerCount}일</span>
                                 </div>
-                                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-emerald-100/80 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
-                                    <span class="text-[9.5px] sm:text-[11px] font-bold">운동 ${exerciseCount}일</span>
+                                <div class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-100/80 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
+                                    <span class="text-[9px] sm:text-[10px] font-bold">운동 ${exerciseCount}일</span>
                                 </div>
-                                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-amber-100/80 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
-                                    <span class="text-[9.5px] sm:text-[11px] font-bold">커피 ${coffeeCount}일</span>
+                                <div class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-100/80 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
+                                    <span class="text-[9px] sm:text-[10px] font-bold">커피 ${coffeeCount}일</span>
                                 </div>
-                                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300">
-                                    <i class="fa-solid fa-crown text-[9.5px] text-amber-500"></i>
-                                    <span class="text-[9.5px] sm:text-[11px] font-bold">완벽 ${perfectDaysCount}일</span>
+                                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300">
+                                    <i class="fa-solid fa-crown text-[8px] text-amber-500"></i>
+                                    <span class="text-[9px] sm:text-[10px] font-bold">완벽 ${perfectDaysCount}일</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- 요일 헤더 (월화수목금토일) -->
-                        <div class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[11px] sm:text-xs font-bold mb-1">
-                            <div class="text-slate-500 dark:text-slate-400 py-1">월</div>
-                            <div class="text-slate-500 dark:text-slate-400 py-1">화</div>
-                            <div class="text-slate-500 dark:text-slate-400 py-1">수</div>
-                            <div class="text-slate-500 dark:text-slate-400 py-1">목</div>
-                            <div class="text-slate-500 dark:text-slate-400 py-1">금</div>
-                            <div class="text-sky-500 py-1 font-bold">토</div>
-                            <div class="text-rose-500 py-1 font-bold">일</div>
+                        <div class="grid grid-cols-7 gap-1 text-center text-[10px] sm:text-xs font-bold">
+                            <div class="text-slate-500 dark:text-slate-400 py-0.5">월</div>
+                            <div class="text-slate-500 dark:text-slate-400 py-0.5">화</div>
+                            <div class="text-slate-500 dark:text-slate-400 py-0.5">수</div>
+                            <div class="text-slate-500 dark:text-slate-400 py-0.5">목</div>
+                            <div class="text-slate-500 dark:text-slate-400 py-0.5">금</div>
+                            <div class="text-sky-500 py-0.5 font-bold">토</div>
+                            <div class="text-rose-500 py-0.5 font-bold">일</div>
                         </div>
 
                         <!-- 캘린더 격자 그리드 -->
-                        <div class="grid grid-cols-7 gap-1 sm:gap-2">
+                        <div class="grid grid-cols-7 gap-1 sm:gap-1.5">
                             ${calendarGridHTML}
-                        </div>
-                    </div>
-
-                    <!-- 습관 체크 카드 -->
-                    <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-2.5">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-                                <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                                    <span class="text-orange-600 dark:text-orange-400">${selectedDateStr}</span> 습관 체크
-                                </h3>
-                            </div>
-                            <span class="text-[11px] text-slate-400 font-medium">탭하여 완료/해제</span>
-                        </div>
-
-                        <!-- 4가지 습관 토글 버튼 (말씀, 기도, 운동, 커피) -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
-                            <button type="button" onclick="toggleDailyHabit('word')" class="relative flex items-center justify-between p-2.5 rounded-xl border transition-all active:scale-[0.98] select-none ${currentRecord.word ? 'bg-orange-500/10 border-orange-500/80 text-orange-600 dark:text-orange-400 font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
-                                <div class="flex items-center space-x-2 truncate">
-                                    <i class="fa-solid fa-book-open text-sm ${currentRecord.word ? 'text-orange-500' : 'text-slate-400'}"></i>
-                                    <span class="text-xs sm:text-sm truncate">말씀</span>
-                                </div>
-                                <div class="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition ${currentRecord.word ? 'bg-orange-500 text-white shadow-sm' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
-                                    <i class="fa-solid fa-check text-[11px]"></i>
-                                </div>
-                            </button>
-
-                            <button type="button" onclick="toggleDailyHabit('prayer')" class="relative flex items-center justify-between p-2.5 rounded-xl border transition-all active:scale-[0.98] select-none ${currentRecord.prayer ? 'bg-indigo-500/10 border-indigo-500/80 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
-                                <div class="flex items-center space-x-2 truncate">
-                                    <i class="fa-solid fa-hands-praying text-sm ${currentRecord.prayer ? 'text-indigo-500' : 'text-slate-400'}"></i>
-                                    <span class="text-xs sm:text-sm truncate">기도</span>
-                                </div>
-                                <div class="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition ${currentRecord.prayer ? 'bg-indigo-500 text-white shadow-sm' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
-                                    <i class="fa-solid fa-check text-[11px]"></i>
-                                </div>
-                            </button>
-
-                            <button type="button" onclick="toggleDailyHabit('exercise')" class="relative flex items-center justify-between p-2.5 rounded-xl border transition-all active:scale-[0.98] select-none ${currentRecord.exercise ? 'bg-emerald-500/10 border-emerald-500/80 text-emerald-600 dark:text-emerald-400 font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
-                                <div class="flex items-center space-x-2 truncate">
-                                    <i class="fa-solid fa-person-running text-sm ${currentRecord.exercise ? 'text-emerald-500' : 'text-slate-400'}"></i>
-                                    <span class="text-xs sm:text-sm truncate">운동</span>
-                                </div>
-                                <div class="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition ${currentRecord.exercise ? 'bg-emerald-500 text-white shadow-sm' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
-                                    <i class="fa-solid fa-check text-[11px]"></i>
-                                </div>
-                            </button>
-
-                            <button type="button" onclick="toggleDailyHabit('coffee')" class="relative flex items-center justify-between p-2.5 rounded-xl border transition-all active:scale-[0.98] select-none ${currentRecord.coffee ? 'bg-amber-500/10 border-amber-500/80 text-amber-600 dark:text-amber-400 font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:border-slate-300'}">
-                                <div class="flex items-center space-x-2 truncate">
-                                    <i class="fa-solid fa-mug-hot text-sm ${currentRecord.coffee ? 'text-amber-500' : 'text-slate-400'}"></i>
-                                    <span class="text-xs sm:text-sm truncate" title="커피 (하루에 1잔 이하)">커피 (1잔 이하)</span>
-                                </div>
-                                <div class="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition ${currentRecord.coffee ? 'bg-amber-500 text-white shadow-sm' : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-transparent'}">
-                                    <i class="fa-solid fa-check text-[11px]"></i>
-                                </div>
-                            </button>
                         </div>
                     </div>
                 </div>
